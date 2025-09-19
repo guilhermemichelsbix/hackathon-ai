@@ -36,6 +36,13 @@ interface KanbanActions {
   reorderColumns: (columns: Column[]) => void;
   reorderColumnsData: (columns: Array<{ id: string; position: number }>) => Promise<Column[]>;
   
+  // Column visibility and ordering
+  toggleColumnVisibility: (columnId: string) => void;
+  setColumnVisibility: (columnId: string, visible: boolean) => void;
+  moveColumnLeft: (columnId: string) => Promise<void>;
+  moveColumnRight: (columnId: string) => Promise<void>;
+  resetColumnVisibility: () => void;
+  
   // Vote actions
   addVote: (vote: Vote) => void;
   toggleVote: (cardId: string) => Promise<void>;
@@ -78,6 +85,8 @@ const initialState: KanbanState = {
   selectedCard: null,
   draggedCard: null,
   user: null,
+  visibleColumns: [], // Will be populated when board loads
+  columnOrder: [], // Will be populated when board loads
 };
 
 export const useKanbanStore = create<KanbanState & KanbanActions>()(
@@ -100,6 +109,29 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
           const board = await kanbanService.getBoard();
           set((state) => {
             state.board = board;
+            
+            // Initialize column order from backend
+            state.columnOrder = board.columns.sort((a, b) => a.position - b.position).map(col => col.id);
+            
+            // Load visible columns from localStorage or default to all
+            const savedVisibleColumns = localStorage.getItem('kanban-visible-columns');
+            if (savedVisibleColumns) {
+              try {
+                const parsed = JSON.parse(savedVisibleColumns);
+                // Only include columns that still exist
+                state.visibleColumns = parsed.filter((id: string) => 
+                  board.columns.some(col => col.id === id)
+                );
+                // If no valid columns, show all
+                if (state.visibleColumns.length === 0) {
+                  state.visibleColumns = board.columns.map(col => col.id);
+                }
+              } catch {
+                state.visibleColumns = board.columns.map(col => col.id);
+              }
+            } else {
+              state.visibleColumns = board.columns.map(col => col.id);
+            }
           });
         } catch (error) {
           console.error('Error loading board:', error);
@@ -237,6 +269,23 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
           state.board.columns.push(column);
         }),
       
+      createColumn: async (data) => {
+        try {
+          const column = await kanbanService.createColumn(data);
+          set((state) => {
+            state.board.columns.push(column);
+            state.columnOrder.push(column.id);
+            state.visibleColumns.push(column.id);
+          });
+          toast.success('Coluna criada com sucesso!');
+          return column;
+        } catch (error) {
+          console.error('Error creating column:', error);
+          toast.error('Erro ao criar coluna');
+          throw error;
+        }
+      },
+      
       updateColumn: (columnId, updates) =>
         set((state) => {
           const columnIndex = state.board.columns.findIndex((c) => c.id === columnId);
@@ -245,16 +294,178 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
           }
         }),
       
+      updateColumnData: async (columnId, data) => {
+        try {
+          const column = await kanbanService.updateColumn(columnId, data);
+          set((state) => {
+            const columnIndex = state.board.columns.findIndex((c) => c.id === columnId);
+            if (columnIndex !== -1) {
+              state.board.columns[columnIndex] = column;
+            }
+          });
+          toast.success('Coluna atualizada com sucesso!');
+          return column;
+        } catch (error) {
+          console.error('Error updating column:', error);
+          toast.error('Erro ao atualizar coluna');
+          throw error;
+        }
+      },
+      
       removeColumn: (columnId) =>
         set((state) => {
           state.board.columns = state.board.columns.filter((c) => c.id !== columnId);
           // Remove cards from deleted column
           state.board.cards = state.board.cards.filter((c) => c.columnId !== columnId);
+          // Remove from order and visibility
+          state.columnOrder = state.columnOrder.filter(id => id !== columnId);
+          state.visibleColumns = state.visibleColumns.filter(id => id !== columnId);
         }),
+      
+      deleteColumn: async (columnId) => {
+        try {
+          await kanbanService.deleteColumn(columnId);
+          set((state) => {
+            state.board.columns = state.board.columns.filter((c) => c.id !== columnId);
+            state.board.cards = state.board.cards.filter((c) => c.columnId !== columnId);
+            state.columnOrder = state.columnOrder.filter(id => id !== columnId);
+            state.visibleColumns = state.visibleColumns.filter(id => id !== columnId);
+          });
+          toast.success('Coluna excluída com sucesso!');
+        } catch (error) {
+          console.error('Error deleting column:', error);
+          toast.error('Erro ao excluir coluna');
+          throw error;
+        }
+      },
       
       reorderColumns: (columns) =>
         set((state) => {
           state.board.columns = columns;
+        }),
+      
+      reorderColumnsData: async (columns) => {
+        try {
+          const reorderedColumns = await kanbanService.reorderColumns(columns);
+          set((state) => {
+            // Update local state with reordered columns
+            columns.forEach(({ id, position }) => {
+              const columnIndex = state.board.columns.findIndex(c => c.id === id);
+              if (columnIndex !== -1) {
+                state.board.columns[columnIndex].position = position;
+              }
+            });
+            // Sort columns by position
+            state.board.columns.sort((a, b) => a.position - b.position);
+            // Update column order
+            state.columnOrder = state.board.columns.map(col => col.id);
+          });
+          toast.success('Ordem das colunas atualizada!');
+          return reorderedColumns;
+        } catch (error) {
+          console.error('Error reordering columns:', error);
+          toast.error('Erro ao reordenar colunas');
+          throw error;
+        }
+      },
+      
+      // Column visibility and ordering
+      toggleColumnVisibility: (columnId) =>
+        set((state) => {
+          const isVisible = state.visibleColumns.includes(columnId);
+          if (isVisible) {
+            state.visibleColumns = state.visibleColumns.filter(id => id !== columnId);
+          } else {
+            state.visibleColumns.push(columnId);
+          }
+          
+          // Save to localStorage
+          localStorage.setItem('kanban-visible-columns', JSON.stringify(state.visibleColumns));
+        }),
+      
+      setColumnVisibility: (columnId, visible) =>
+        set((state) => {
+          if (visible) {
+            if (!state.visibleColumns.includes(columnId)) {
+              state.visibleColumns.push(columnId);
+            }
+          } else {
+            state.visibleColumns = state.visibleColumns.filter(id => id !== columnId);
+          }
+          
+          // Save to localStorage
+          localStorage.setItem('kanban-visible-columns', JSON.stringify(state.visibleColumns));
+        }),
+      
+      moveColumnLeft: async (columnId) => {
+        const state = get();
+        const currentIndex = state.columnOrder.indexOf(columnId);
+        if (currentIndex > 0) {
+          // Swap with previous column
+          const newOrder = [...state.columnOrder];
+          [newOrder[currentIndex - 1], newOrder[currentIndex]] = [newOrder[currentIndex], newOrder[currentIndex - 1]];
+          
+          // Update local state immediately for smooth UX
+          set((state) => {
+            state.columnOrder = newOrder;
+            newOrder.forEach((id, index) => {
+              const column = state.board.columns.find(c => c.id === id);
+              if (column) {
+                column.position = index;
+              }
+            });
+          });
+          
+          // Save to backend
+          try {
+            const columnsToUpdate = newOrder.map((id, index) => ({ id, position: index }));
+            await kanbanService.reorderColumns(columnsToUpdate);
+            toast.success('Ordem das colunas atualizada!');
+          } catch (error) {
+            console.error('Error moving column left:', error);
+            toast.error('Erro ao mover coluna');
+            // Could implement rollback here if needed
+          }
+        }
+      },
+      
+      moveColumnRight: async (columnId) => {
+        const state = get();
+        const currentIndex = state.columnOrder.indexOf(columnId);
+        if (currentIndex < state.columnOrder.length - 1) {
+          // Swap with next column
+          const newOrder = [...state.columnOrder];
+          [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
+          
+          // Update local state immediately for smooth UX
+          set((state) => {
+            state.columnOrder = newOrder;
+            newOrder.forEach((id, index) => {
+              const column = state.board.columns.find(c => c.id === id);
+              if (column) {
+                column.position = index;
+              }
+            });
+          });
+          
+          // Save to backend
+          try {
+            const columnsToUpdate = newOrder.map((id, index) => ({ id, position: index }));
+            await kanbanService.reorderColumns(columnsToUpdate);
+            toast.success('Ordem das colunas atualizada!');
+          } catch (error) {
+            console.error('Error moving column right:', error);
+            toast.error('Erro ao mover coluna');
+            // Could implement rollback here if needed
+          }
+        }
+      },
+      
+      resetColumnVisibility: () =>
+        set((state) => {
+          state.visibleColumns = state.board.columns.map(col => col.id);
+          // Save to localStorage
+          localStorage.setItem('kanban-visible-columns', JSON.stringify(state.visibleColumns));
         }),
       
       // Vote actions
@@ -533,6 +744,9 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
       getFilteredCards: () => {
         const state = get();
         let cards = state.board.cards;
+        
+        // Filter by visible columns first
+        cards = cards.filter((card) => state.visibleColumns.includes(card.columnId));
         
         // Filter by search query
         if (state.searchQuery) {

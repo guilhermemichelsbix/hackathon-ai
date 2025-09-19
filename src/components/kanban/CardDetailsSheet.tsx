@@ -36,7 +36,6 @@ import {
 
 import type { Card, Comment } from '@/types/kanban';
 import { useKanbanStore, useCurrentUser } from '@/store/kanban';
-import { getUserById } from '@/lib/mock-data';
 
 interface CardDetailsSheetProps {
   card: Card | null;
@@ -64,7 +63,7 @@ export function CardDetailsSheet({
 
   if (!card) return null;
 
-  const creator = getUserById(card.createdBy);
+  const creator = card.creator;
   const userHasVoted = currentUser ? getUserVoteForCard(card.id, currentUser.id) : false;
   const canEdit = currentUser?.id === card.createdBy;
   const locale = i18n.language === 'pt-BR' ? ptBR : enUS;
@@ -142,12 +141,12 @@ export function CardDetailsSheet({
                 <div className="flex items-center gap-2">
                   <Avatar className="h-7 w-7 shadow-sm ring-1 ring-border/20">
                     <AvatarFallback className="text-xs font-medium bg-primary text-primary-foreground">
-                      {creator?.name.charAt(0).toUpperCase()}
+                      {creator?.name?.charAt(0).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
                     <span className="text-xs font-medium text-foreground">
-                      {creator?.name}
+                      {creator?.name || 'Usuário'}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(card.createdAt, { addSuffix: true, locale })}
@@ -275,7 +274,7 @@ export function CardDetailsSheet({
               <div className="space-y-4">
                 {sortedComments.length > 0 ? (
                     sortedComments.map((comment) => {
-                      const commentUser = getUserById(comment.createdBy);
+                      const commentUser = comment.creator;
                       const canEditComment = currentUser?.id === comment.createdBy;
                       const isEditing = editingComment === comment.id;
 
@@ -287,7 +286,7 @@ export function CardDetailsSheet({
                           <div className="flex gap-3">
                             <Avatar className="h-6 w-6 shadow-sm ring-1 ring-border/20 flex-shrink-0">
                               <AvatarFallback className="text-xs font-medium bg-primary text-primary-foreground">
-                                {commentUser?.name.charAt(0).toUpperCase()}
+                                {commentUser?.name?.charAt(0).toUpperCase() || 'U'}
                               </AvatarFallback>
                             </Avatar>
                             
@@ -295,7 +294,7 @@ export function CardDetailsSheet({
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs font-medium text-foreground">
-                                    {commentUser?.name}
+                                    {commentUser?.name || 'Usuário'}
                                   </span>
                                   <div className="h-1 w-1 rounded-full bg-muted-foreground/50"></div>
                                   <span className="text-xs text-muted-foreground">

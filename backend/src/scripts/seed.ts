@@ -65,46 +65,46 @@ async function main() {
   // Create columns
   const columns = await Promise.all([
     prisma.column.upsert({
-      where: { id: 'col-1' },
+      where: { id: 'cmfr46mmc0000jnxebw63kt76' },
       update: {},
       create: {
-        id: 'col-1',
+        id: 'cmfr46mmc0000jnxebw63kt76',
         name: 'Backlog',
         position: 0,
       },
     }),
     prisma.column.upsert({
-      where: { id: 'col-2' },
+      where: { id: 'cmfr46mmc0001jnxemx6lt23u' },
       update: {},
       create: {
-        id: 'col-2',
+        id: 'cmfr46mmc0001jnxemx6lt23u',
         name: 'Em Análise',
         position: 1,
       },
     }),
     prisma.column.upsert({
-      where: { id: 'col-3' },
+      where: { id: 'cmfr46mmc0002jnxejo9pnbhz' },
       update: {},
       create: {
-        id: 'col-3',
+        id: 'cmfr46mmc0002jnxejo9pnbhz',
         name: 'Aprovado',
         position: 2,
       },
     }),
     prisma.column.upsert({
-      where: { id: 'col-4' },
+      where: { id: 'cmfr46mmc0003jnxezr51xyw4' },
       update: {},
       create: {
-        id: 'col-4',
+        id: 'cmfr46mmc0003jnxezr51xyw4',
         name: 'Em Desenvolvimento',
         position: 3,
       },
     }),
     prisma.column.upsert({
-      where: { id: 'col-5' },
+      where: { id: 'cmfr46mmc0004jnxe9d2hvep2' },
       update: {},
       create: {
-        id: 'col-5',
+        id: 'cmfr46mmc0004jnxe9d2hvep2',
         name: 'Concluído',
         position: 4,
       },
@@ -116,61 +116,61 @@ async function main() {
   // Create cards
   const cards = await Promise.all([
     prisma.card.upsert({
-      where: { id: 'card-1' },
+      where: { id: 'cmfr46mmc0005jnxex63prjoi' },
       update: {},
       create: {
-        id: 'card-1',
+        id: 'cmfr46mmc0005jnxex63prjoi',
         title: 'Chatbot IA para Atendimento 24/7',
         description: 'Implementar um chatbot com inteligência artificial para atendimento ao cliente 24 horas, reduzindo tempo de espera e melhorando a experiência do usuário. O sistema seria capaz de resolver 80% das dúvidas mais comuns automaticamente.',
-        columnId: 'col-2',
+        columnId: columns[1].id, // Em Análise
         createdBy: users[0].id,
         position: 0,
       },
     }),
     prisma.card.upsert({
-      where: { id: 'card-2' },
+      where: { id: 'cmfr46mmc0006jnxex63prjoj' },
       update: {},
       create: {
-        id: 'card-2',
+        id: 'cmfr46mmc0006jnxex63prjoj',
         title: 'Sistema de Gamificação para Funcionários',
         description: 'Criar um sistema de gamificação interno que recompense funcionários por alcançar metas, colaborar em projetos e contribuir com ideias inovadoras. Incluiria rankings, badges e recompensas tangíveis.',
-        columnId: 'col-1',
+        columnId: columns[0].id, // Backlog
         createdBy: users[1].id,
         position: 0,
       },
     }),
     prisma.card.upsert({
-      where: { id: 'card-3' },
+      where: { id: 'cmfr46mmc0007jnxex63prjok' },
       update: {},
       create: {
-        id: 'card-3',
+        id: 'cmfr46mmc0007jnxex63prjok',
         title: 'App Mobile para Gestão de Projetos',
         description: 'Desenvolver um aplicativo mobile nativo que permita aos gestores acompanhar o progresso dos projetos em tempo real, com notificações push, relatórios automáticos e integração com calendário.',
-        columnId: 'col-3',
+        columnId: columns[2].id, // Aprovado
         createdBy: users[2].id,
         position: 0,
       },
     }),
     prisma.card.upsert({
-      where: { id: 'card-4' },
+      where: { id: 'cmfr46mmc0008jnxex63prjol' },
       update: {},
       create: {
-        id: 'card-4',
+        id: 'cmfr46mmc0008jnxex63prjol',
         title: 'Plataforma de E-learning Corporativo',
         description: 'Criar uma plataforma interna de educação continuada com cursos personalizados, trilhas de aprendizado baseadas em IA e certificações internas. Foco em upskilling e reskilling dos colaboradores.',
-        columnId: 'col-4',
+        columnId: columns[3].id, // Em Desenvolvimento
         createdBy: users[3].id,
         position: 0,
       },
     }),
     prisma.card.upsert({
-      where: { id: 'card-5' },
+      where: { id: 'cmfr46mmc0009jnxex63prjom' },
       update: {},
       create: {
-        id: 'card-5',
+        id: 'cmfr46mmc0009jnxex63prjom',
         title: 'Dashboard de Sustentabilidade',
         description: 'Implementar um dashboard em tempo real que monitore e visualize as métricas de sustentabilidade da empresa: consumo de energia, emissões de carbono, reciclagem e outras métricas ESG.',
-        columnId: 'col-1',
+        columnId: columns[0].id, // Backlog
         createdBy: users[4].id,
         position: 1,
       },
@@ -181,32 +181,67 @@ async function main() {
 
   // Create some votes
   const votes = await Promise.all([
-    prisma.vote.create({
-      data: {
+    prisma.vote.upsert({
+      where: {
+        cardId_userId: {
+          cardId: cards[0].id,
+          userId: users[1].id,
+        },
+      },
+      update: {},
+      create: {
         cardId: cards[0].id,
         userId: users[1].id,
       },
     }),
-    prisma.vote.create({
-      data: {
+    prisma.vote.upsert({
+      where: {
+        cardId_userId: {
+          cardId: cards[0].id,
+          userId: users[2].id,
+        },
+      },
+      update: {},
+      create: {
         cardId: cards[0].id,
         userId: users[2].id,
       },
     }),
-    prisma.vote.create({
-      data: {
+    prisma.vote.upsert({
+      where: {
+        cardId_userId: {
+          cardId: cards[0].id,
+          userId: users[3].id,
+        },
+      },
+      update: {},
+      create: {
         cardId: cards[0].id,
         userId: users[3].id,
       },
     }),
-    prisma.vote.create({
-      data: {
+    prisma.vote.upsert({
+      where: {
+        cardId_userId: {
+          cardId: cards[1].id,
+          userId: users[0].id,
+        },
+      },
+      update: {},
+      create: {
         cardId: cards[1].id,
         userId: users[0].id,
       },
     }),
-    prisma.vote.create({
-      data: {
+    prisma.vote.upsert({
+      where: {
+        cardId_userId: {
+          cardId: cards[1].id,
+          userId: users[4].id,
+        },
+      },
+      update: {},
+      create: {
         cardId: cards[1].id,
         userId: users[4].id,
       },

@@ -11,7 +11,13 @@ import {
   Settings,
   Globe,
   Sun,
-  Moon
+  Moon,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  BarChart3,
+  MessageSquare,
+  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,11 +49,15 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
     setSearchQuery, 
     selectedColumnId, 
     setSelectedColumnId,
+    visibleColumns,
+    columnOrder,
     board,
     user,
     setUser,
     loadBoard,
-    connectToRealtime
+    connectToRealtime,
+    toggleColumnVisibility,
+    resetColumnVisibility
   } = useKanbanStore();
   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -204,6 +214,56 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
                   ))}
                 </SelectContent>
               </Select>
+              
+              {/* Advanced Column Visibility Filter */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-9 px-3 bg-background/50 border-border/50 hover:bg-background hover:border-border transition-all duration-200"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Colunas
+                    <ChevronDown className="h-3 w-3 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 bg-popover border-border/50">
+                  <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
+                    Visibilidade das Colunas
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {columnOrder.map((columnId) => {
+                    const column = board.columns.find(col => col.id === columnId);
+                    if (!column) return null;
+                    
+                    const isVisible = visibleColumns.includes(columnId);
+                    const isOnlyVisible = visibleColumns.length === 1 && isVisible;
+                    
+                    return (
+                      <DropdownMenuItem
+                        key={columnId}
+                        onClick={() => toggleColumnVisibility(columnId)}
+                        className="flex items-center justify-between cursor-pointer"
+                        disabled={isOnlyVisible}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${isVisible ? 'bg-green-500' : 'bg-gray-400'}`} />
+                          <span className="text-sm">{column.name}</span>
+                        </div>
+                        <EyeOff className={`h-3 w-3 ${isVisible ? 'text-green-600' : 'text-gray-400'}`} />
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={resetColumnVisibility}
+                    className="text-xs text-muted-foreground cursor-pointer"
+                  >
+                    Mostrar todas as colunas
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Center: Stats */}

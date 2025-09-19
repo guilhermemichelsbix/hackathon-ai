@@ -6,7 +6,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
-import { Plus, MoreHorizontal } from 'lucide-react';
+import { Plus, MoreHorizontal, ChevronLeft, ChevronRight, EyeOff, Edit, Trash2 } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 
 import { KanbanCard } from './KanbanCard';
@@ -31,6 +32,9 @@ interface KanbanColumnProps {
   onCardEdit?: (card: KanbanCardType) => void;
   onCardDelete?: (card: KanbanCardType) => void;
   onCardVote?: (card: KanbanCardType) => void;
+  onMoveColumnLeft?: (columnId: string) => void;
+  onMoveColumnRight?: (columnId: string) => void;
+  onHideColumn?: (columnId: string) => void;
 }
 
 export function KanbanColumn({
@@ -43,6 +47,9 @@ export function KanbanColumn({
   onCardEdit,
   onCardDelete,
   onCardVote,
+  onMoveColumnLeft,
+  onMoveColumnRight,
+  onHideColumn,
 }: KanbanColumnProps) {
   const { t } = useTranslation();
   const { theme } = useTheme();
@@ -63,9 +70,14 @@ export function KanbanColumn({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, x: 20 }}
+      initial={false}
       animate={{ opacity: 1, x: 0 }}
-      className="w-80 sm:w-96 flex-shrink-0"
+      transition={{ 
+        type: "spring", 
+        stiffness: 200, 
+        damping: 25
+      }}
+      className="w-full flex-shrink-0"
     >
              <div className={`
                flex flex-col h-[calc(100vh-220px)] bg-card/50 backdrop-blur-sm border border-border/30 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl
@@ -101,15 +113,46 @@ export function KanbanColumn({
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background/95 backdrop-blur-xl border-border/50 shadow-xl">
+              <DropdownMenuContent align="end" className="w-48 bg-background/95 backdrop-blur-xl border-border/50 shadow-xl">
                 <DropdownMenuItem onClick={() => onEditColumn?.(column)} className="hover:bg-primary/10 transition-colors duration-200">
-                  {t('column.editColumn')}
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar coluna
                 </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuItem 
+                  onClick={() => onMoveColumnLeft?.(column.id)}
+                  className="hover:bg-secondary/50 transition-colors duration-200"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Mover para esquerda
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  onClick={() => onMoveColumnRight?.(column.id)}
+                  className="hover:bg-secondary/50 transition-colors duration-200"
+                >
+                  <ChevronRight className="h-4 w-4 mr-2" />
+                  Mover para direita
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuItem 
+                  onClick={() => onHideColumn?.(column.id)}
+                  className="text-orange-600 hover:bg-orange-50 transition-colors duration-200"
+                >
+                  <EyeOff className="h-4 w-4 mr-2" />
+                  Ocultar coluna
+                </DropdownMenuItem>
+                
                 <DropdownMenuItem 
                   onClick={() => onDeleteColumn?.(column)}
                   className="text-destructive hover:bg-destructive/10 transition-colors duration-200"
                 >
-                  {t('column.deleteColumn')}
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir coluna
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -143,8 +186,14 @@ export function KanbanColumn({
                 {/* Empty state */}
                 {cards.length === 0 && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
+                    initial={false}
                     animate={{ opacity: 1, scale: 1 }}
+                    transition={{ 
+                      type: "spring", 
+                      stiffness: 150, 
+                      damping: 20,
+                      delay: 0.1
+                    }}
                     className="flex flex-col items-center justify-center py-16 text-center px-6"
                   >
                     <div className="rounded-2xl p-8 mb-6 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 shadow-lg">

@@ -14,6 +14,7 @@ import {
 import { arrayMove } from '@dnd-kit/sortable';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { apiService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -22,7 +23,7 @@ import { KanbanCard } from './KanbanCard';
 import { CardDetailsSheet } from './CardDetailsSheet';
 import { CardFormModal } from './CardFormModal';
 import { useKanbanStore } from '@/store/kanban';
-import { simulateApiDelay } from '@/lib/mock-data';
+import { kanbanService } from '@/services/kanbanService';
 import type { Card, Column } from '@/types/kanban';
 
 export function KanbanBoard() {
@@ -42,14 +43,20 @@ export function KanbanBoard() {
     isLoading,
     searchQuery,
     selectedColumnId,
+    visibleColumns,
+    columnOrder,
     getCardsByColumn,
     getFilteredCards,
     moveCard,
+    moveCardData,
     addVote,
     removeVote,
     getUserVoteForCard,
     setLoading,
     user: currentUser,
+    moveColumnLeft,
+    moveColumnRight,
+    toggleColumnVisibility,
   } = useKanbanStore();
 
   const sensors = useSensors(
@@ -59,6 +66,14 @@ export function KanbanBoard() {
       },
     })
   );
+
+  // Get visible and ordered columns
+  const getVisibleColumns = useCallback(() => {
+    return columnOrder
+      .filter(columnId => visibleColumns.includes(columnId))
+      .map(columnId => board.columns.find(col => col.id === columnId))
+      .filter(Boolean) as Column[];
+  }, [columnOrder, visibleColumns, board.columns]);
 
   // Filter cards based on search and column filter
   const getVisibleCardsForColumn = useCallback((columnId: string) => {
@@ -90,7 +105,7 @@ export function KanbanBoard() {
     const draggedCard = board.cards.find(c => c.id === cardId);
     if (!draggedCard) return;
 
-    // Determine if we're dropping on a column or another card
+    // Determine target column and position
     let targetColumnId: string;
     let newPosition: number;
 
@@ -98,14 +113,31 @@ export function KanbanBoard() {
     const targetCard = board.cards.find(c => c.id === overId);
 
     if (targetColumn) {
-      // Dropped on a column
+      // Dropped directly on a column - add to the end
       targetColumnId = targetColumn.id;
       const cardsInColumn = getCardsByColumn(targetColumnId);
       newPosition = cardsInColumn.length;
     } else if (targetCard) {
       // Dropped on another card
       targetColumnId = targetCard.columnId;
-      newPosition = targetCard.position;
+      
+      if (draggedCard.columnId === targetColumnId) {
+        // Moving within the same column - use arrayMove logic
+        const cardsInColumn = getCardsByColumn(targetColumnId)
+          .sort((a, b) => a.position - b.position);
+        
+        const oldIndex = cardsInColumn.findIndex(c => c.id === cardId);
+        const newIndex = cardsInColumn.findIndex(c => c.id === targetCard.id);
+        
+        if (oldIndex !== -1 && newIndex !== -1) {
+          newPosition = newIndex;
+        } else {
+          return; // Invalid indices
+        }
+      } else {
+        // Moving to different column - insert after target card
+        newPosition = targetCard.position + 1;
+      }
     } else {
       return;
     }
@@ -116,20 +148,20 @@ export function KanbanBoard() {
     }
 
     try {
-      setLoading(true);
-      
-      // Optimistic update
+      // Optimistic update first (smooth animation)
       moveCard(cardId, targetColumnId, newPosition);
       
-      // Simulate API call
-      await simulateApiDelay(300);
+      // Then call API in background (don't block UI)
+      moveCardData(cardId, targetColumnId, newPosition).catch((error) => {
+        console.error('Error moving card:', error);
+        toast.error('Erro ao mover card');
+        // Could implement rollback here if needed
+      });
       
       toast.success(t('card.updateSuccess'));
     } catch (error) {
       console.error('Error moving card:', error);
-      toast.error(t('error.generic'));
-    } finally {
-      setLoading(false);
+      toast.error('Erro ao mover card');
     }
   };
 
@@ -146,7 +178,6 @@ export function KanbanBoard() {
 
     try {
       setLoading(true);
-      await simulateApiDelay(300);
       // TODO: Implement delete card API call
       toast.success(t('card.deleteSuccess'));
     } catch (error) {
@@ -164,20 +195,18 @@ export function KanbanBoard() {
     
     try {
       if (hasVoted) {
+        // Remove vote via API
+        await apiService.removeVote(card.id);
+        // Update local state
         removeVote(card.id, currentUser.id);
         toast.success(t('card.unvoteSuccess'));
       } else {
-        addVote({
-          id: `vote-${Date.now()}`,
-          cardId: card.id,
-          userId: currentUser.id,
-          createdAt: new Date(),
-        });
+        // Add vote via API
+        const newVote = await apiService.addVote(card.id);
+        // Update local state
+        addVote(newVote);
         toast.success(t('card.voteSuccess'));
       }
-      
-      // Simulate API call
-      await simulateApiDelay(200);
     } catch (error) {
       console.error('Error voting on card:', error);
       toast.error(t('error.generic'));
@@ -286,28 +315,42 @@ export function KanbanBoard() {
                  >
                    <div className="flex gap-6 h-full min-w-max px-6 pb-6">
             <AnimatePresence mode="popLayout">
-              {[...board.columns]
-                .sort((a, b) => a.position - b.position)
-                .map((column) => {
-                  const cards = getVisibleCardsForColumn(column.id);
-                  
-                  return (
-                           <motion.div
-                             key={column.id}
-                             layout
-                           >
-                      <KanbanColumn
-                        column={column}
-                        cards={cards}
-                        onAddCard={handleAddCard}
-                        onCardClick={handleCardClick}
-                        onCardEdit={handleCardEdit}
-                        onCardDelete={handleCardDelete}
-                        onCardVote={handleCardVote}
-                      />
-                    </motion.div>
-                  );
-                })}
+              {getVisibleColumns().map((column) => {
+                const cards = getVisibleCardsForColumn(column.id);
+                
+                return (
+                  <motion.div
+                    key={column.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ 
+                      type: "spring", 
+                      stiffness: 300, 
+                      damping: 30,
+                      duration: 0.3
+                    }}
+                    className={`
+                      transition-all duration-500 ease-out
+                      ${getVisibleColumns().length === 1 ? 'w-full max-w-4xl mx-auto' : 'w-80 sm:w-96 flex-shrink-0'}
+                    `}
+                  >
+                    <KanbanColumn
+                      column={column}
+                      cards={cards}
+                      onAddCard={handleAddCard}
+                      onCardClick={handleCardClick}
+                      onCardEdit={handleCardEdit}
+                      onCardDelete={handleCardDelete}
+                      onCardVote={handleCardVote}
+                      onMoveColumnLeft={moveColumnLeft}
+                      onMoveColumnRight={moveColumnRight}
+                      onHideColumn={toggleColumnVisibility}
+                    />
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
             </div>
           </div>

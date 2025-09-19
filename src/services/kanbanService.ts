@@ -150,10 +150,13 @@ class KanbanService {
 
   // Utility methods
   async getBoard(): Promise<{ columns: Column[]; cards: Card[] }> {
-    const [columns, cards] = await Promise.all([
-      this.getColumns(),
-      this.getCards()
-    ]);
+    const columns = await this.getColumns();
+    
+    // Extract all cards from columns
+    const cards: Card[] = [];
+    columns.forEach(column => {
+      cards.push(...column.cards);
+    });
 
     return { columns, cards };
   }

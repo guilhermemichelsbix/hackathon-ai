@@ -29,7 +29,6 @@ import {
 
 import type { Card as KanbanCard } from '@/types/kanban';
 import { useKanbanStore, useCurrentUser } from '@/store/kanban';
-import { getUserById } from '@/lib/mock-data';
 
 interface KanbanCardProps {
   card: KanbanCard;
@@ -67,7 +66,7 @@ export const KanbanCard = forwardRef<HTMLDivElement, KanbanCardProps>(({
     transition,
   };
 
-  const creator = getUserById(card.createdBy);
+  const creator = card.creator;
   const userHasVoted = currentUser ? getUserVoteForCard(card.id, currentUser.id) : false;
   const canEdit = currentUser?.id === card.createdBy;
   const locale = i18n.language === 'pt-BR' ? ptBR : enUS;
@@ -116,11 +115,22 @@ export const KanbanCard = forwardRef<HTMLDivElement, KanbanCardProps>(({
       {...attributes}
       {...listeners}
       layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 30,
+        mass: 0.8
+      }}
+      whileHover={{ 
+        y: -2,
+        transition: { duration: 0.2 }
+      }}
+      whileTap={{ 
+        scale: 0.98,
+        transition: { duration: 0.1 }
+      }}
       className={`
         group touch-none kanban-card-wrapper
         ${isDragging || sortableIsDragging ? 'opacity-50 rotate-1 shadow-2xl sortable-chosen' : ''}
@@ -135,11 +145,11 @@ export const KanbanCard = forwardRef<HTMLDivElement, KanbanCardProps>(({
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <Avatar className="h-7 w-7 shadow-sm">
               <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">
-                {creator?.name.charAt(0).toUpperCase()}
+                {creator?.name?.charAt(0).toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
             <span className="text-xs text-muted-foreground truncate font-medium">
-              {creator?.name}
+              {creator?.name || 'Usuário'}
             </span>
           </div>
           

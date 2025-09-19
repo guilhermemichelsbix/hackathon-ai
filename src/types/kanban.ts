@@ -28,6 +28,7 @@ export interface Card {
   polls: Poll[];
   createdAt: Date;
   updatedAt: Date;
+  creator?: User; // Populated user info
 }
 
 export interface Vote {
@@ -44,7 +45,7 @@ export interface Comment {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
-  user?: User; // Populated user info
+  creator?: User; // Populated user info
 }
 
 export interface Poll {
@@ -103,6 +104,8 @@ export interface KanbanState {
   selectedCard: Card | null;
   draggedCard: DraggedCard | null;
   user: User | null;
+  visibleColumns: string[]; // Array of column IDs that are visible
+  columnOrder: string[]; // Array of column IDs in the desired order
 }
 
 // API Types

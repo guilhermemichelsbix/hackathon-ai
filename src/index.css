@@ -281,12 +281,28 @@
          
          /* Smooth drag animations without causing scrollbars */
          .sortable-ghost {
-           opacity: 0.5;
-           transform: rotate(5deg);
+           opacity: 0.8;
+           transform: rotate(2deg) scale(1.02);
+           transition: all 0.2s ease-out;
+           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
          }
          
          .sortable-chosen {
            cursor: grabbing !important;
+           transform: scale(1.05);
+           transition: all 0.2s ease-out;
+           box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+           z-index: 1000;
+         }
+         
+         /* Smooth drop animations */
+         .kanban-card-wrapper {
+           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+         }
+         
+         .kanban-card-wrapper:hover {
+           transform: translateY(-2px);
+           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
          }
          
          /* Prevent horizontal scrollbar in cards container */
