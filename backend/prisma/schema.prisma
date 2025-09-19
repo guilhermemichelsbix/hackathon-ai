@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  locale       String   @default("pt-BR")
+  createdAt    DateTime @default(now())
+  cards        Card[]
+  comments     Comment[]
+  votes        Vote[]
+  pollVotes    PollVote[]
+
+  @@map("users")
+}
+
+model Column {
+  id        String   @id @default(cuid())
+  name      String
+  position  Int
+  createdAt DateTime @default(now())
+  cards     Card[]
+
+  @@map("columns")
+}
+
+model Card {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  columnId    String
+  createdBy   String
+  position    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  column      Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  creator     User     @relation(fields: [createdBy], references: [id])
+  comments    Comment[]
+  votes       Vote[]
+  polls       Poll[]
+
+  @@map("cards")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  cardId    String
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  creator   User     @relation(fields: [createdBy], references: [id])
+
+  @@map("comments")
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  cardId    String
+  userId    String
+  createdAt DateTime @default(now())
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([cardId, userId])
+  @@map("votes")
+}
+
+model Poll {
+  id              String       @id @default(cuid())
+  question        String
+  cardId          String
+  createdBy       String
+  allowMultiple   Boolean      @default(false)
+  isSecret        Boolean      @default(false)
+  isActive        Boolean      @default(true)
+  endsAt          DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  card            Card         @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  options         PollOption[]
+  votes           PollVote[]
+
+  @@map("polls")
+}
+
+model PollOption {
+  id        String     @id @default(cuid())
+  text      String
+  pollId    String
+  position  Int
+  createdAt DateTime   @default(now())
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes     PollVote[]
+
+  @@map("poll_options")
+}
+
+model PollVote {
+  id       String     @id @default(cuid())
+  pollId   String
+  optionId String
+  userId   String
+  createdAt DateTime  @default(now())
+  poll     Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id])
+
+  @@unique([pollId, optionId, userId])
+  @@map("poll_votes")
+}

@@ -1,0 +1,228 @@
+# cursor.rules – Kanban de Ideias
+
+## Nome do Projeto
+**Kanban de Ideias** – uma plataforma visual para pipeline de inovação da empresa.
+
+## Visão Geral
+O sistema é um aplicativo full-stack Kanban para gestão de ideias.
+Deve permitir que usuários autenticados criem, votem, comentem e movam cards entre colunas de um board, com atualizações em tempo real e suporte multilíngue (PT-BR/EN).
+O design deve ser moderno, bonito e responsivo, com drag-and-drop animado.
+
+## Stack Obrigatória
+
+### Backend
+- Node.js (20+) + TypeScript
+- Express (servidor HTTP)
+- Prisma ORM (PostgreSQL em produção; SQLite em dev)
+- Zod (validação de entrada/saída)
+- JWT Auth (access + refresh, cookies httpOnly em prod)
+- Helmet, CORS, rate limiting (segurança)
+- OpenAPI/Swagger em /docs
+- SSE para tempo real (fallback: short-polling; futuro: WebSocket)
+- Jest para testes de regras críticas
+
+### Frontend
+- React 18 + Vite + TypeScript
+- Tailwind CSS (tema, dark mode, responsividade)
+- shadcn/ui (componentes base acessíveis)
+- TanStack Query (data-fetching e cache)
+- Zustand (estado global: board, UI, idioma)
+- i18next (PT-BR e EN)
+- dnd-kit (drag-and-drop com overlay)
+- Framer Motion (animações suaves em drag, hover, enter/exit)
+- React Testing Library (testes de UI mínimos)
+
+## Requisitos Funcionais
+
+### Cards de Ideia
+- criar, listar, detalhar, editar (somente criador), excluir (opcional).
+
+### Colunas
+- criar, listar, editar, excluir e reordenar.
+
+### Mover cards
+- drag-and-drop entre colunas, com posição persistida.
+
+### Votos
+- cada usuário pode votar/desvotar uma vez por card.
+
+### Comentários
+- criar, listar, editar e excluir (somente autor).
+
+### Busca
+- por título, descrição ou criador.
+
+### Filtro
+- por coluna/status.
+
+### Autenticação
+- login/logout, proteção de rotas, sessão persistida.
+
+### Autorização
+- Qualquer autenticado: ver board, criar card, mover card, votar, comentar.
+- Apenas criador: editar card ou comentário.
+
+### Tempo real
+- SSE envia eventos de criação, edição, votos, comentários.
+
+### i18n
+- suporte completo PT-BR e EN desde o início.
+
+### Auditoria mínima
+- timestamps em todos os registros.
+
+## Requisitos Não Funcionais
+
+### Arquitetura limpa
+- camadas separadas no backend (routes → controllers → services → repositories).
+
+### Segurança
+- menor privilégio; validações com Zod.
+
+### Transações
+- operações críticas (mover card, votar) com Prisma.$transaction.
+
+### Performance
+- buscas < 300ms; SSE com latência < 1s.
+
+### Acessibilidade
+- ARIA roles, foco visível, contraste adequado.
+
+### Responsividade
+- experiência fluida em desktop, tablet e mobile.
+
+### Documentação
+- README claro + docs/ARQUITETURA.md com modelo de dados, fluxo real-time e decisões.
+
+### Qualidade
+- lint, prettier, husky pre-commit, testes cobrindo permissões e votos.
+
+## Modelagem de Dados (Prisma)
+```prisma
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  locale       String   @default("pt-BR")
+  createdAt    DateTime @default(now())
+  cards        Card[]
+  comments     Comment[]
+  votes        Vote[]
+}
+
+model Column {
+  id        String   @id @default(cuid())
+  name      String
+  position  Int
+  createdAt DateTime @default(now())
+  cards     Card[]
+}
+
+model Card {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  columnId    String
+  createdBy   String
+  position    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  column      Column   @relation(fields: [columnId], references: [id])
+  creator     User     @relation(fields: [createdBy], references: [id])
+  comments    Comment[]
+  votes       Vote[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  cardId    String
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  card      Card     @relation(fields: [cardId], references: [id])
+  creator   User     @relation(fields: [createdBy], references: [id])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  cardId    String
+  userId    String
+  createdAt DateTime @default(now())
+  card      Card     @relation(fields: [cardId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([cardId, userId])
+}
+```
+
+## API REST
+
+### Auth
+- POST /auth/register
+- POST /auth/login
+- POST /auth/logout
+- GET /auth/me
+
+### Columns
+- GET /columns
+- POST /columns
+- PATCH /columns/:id
+- PATCH /columns/reorder
+- DELETE /columns/:id
+
+### Cards
+- GET /cards?query=&creator=&columnId=
+- POST /cards
+- GET /cards/:id
+- PATCH /cards/:id (somente criador)
+- DELETE /cards/:id (opcional)
+- PATCH /cards/:id/move
+
+### Votes
+- POST /cards/:id/votes
+- DELETE /cards/:id/votes
+
+### Comments
+- GET /cards/:id/comments
+- POST /cards/:id/comments
+- PATCH /comments/:id (somente autor)
+- DELETE /comments/:id (somente autor)
+
+### Real-time (SSE)
+- GET /events → envia eventos: card.created, card.updated, card.moved, vote.added, vote.removed, comment.added, comment.updated, comment.deleted.
+
+## UI/UX Esperada
+
+### Board principal
+- grid de colunas, drag-and-drop fluido, contadores de votos.
+
+### Novo card
+- modal com título e descrição obrigatórios.
+
+### Detalhe do card
+- modal/drawer com descrições, votos, comentários.
+
+### Interações animadas
+- Framer Motion em drag, hover, entrada/saída.
+
+### Tema moderno
+- cores suaves, dark mode, shadcn/ui como base.
+
+### Feedback
+- loading, toasts de erro/sucesso, empty states.
+
+### Acessibilidade
+- navegação por teclado, roles, labels ARIA.
+
+## Critérios de Aceitação
+
+- CRUD de cards/colunas funcional.
+- Drag-and-drop com persistência.
+- Votos e comentários respeitando permissões.
+- Atualizações em tempo real visíveis.
+- i18n PT-BR/EN funcionando com seletor de idioma.
+- README e docs claros.
+- Testes de regras críticas passando.
+- Código bem organizado e com qualidade.

@@ -1,0 +1,21 @@
+# Copie este arquivo para .env e configure as variáveis
+
+# Database
+DATABASE_URL="file:./dev.db"
+
+# JWT
+JWT_SECRET="kanban-ideas-super-secret-jwt-key-2024"
+JWT_REFRESH_SECRET="kanban-ideas-super-secret-refresh-key-2024"
+JWT_EXPIRES_IN="15m"
+JWT_REFRESH_EXPIRES_IN="7d"
+
+# Server
+PORT=3001
+NODE_ENV="development"
+
+# CORS
+CORS_ORIGIN="http://localhost:5173"
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
