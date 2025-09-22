@@ -13,7 +13,8 @@
     "update": "Atualizar",
     "confirm": "Confirmar",
     "characters": "caracteres",
-    "user": "Usuário"
+    "user": "Usuário",
+    "allRightsReserved": "Todos os direitos reservados"
   },
   "auth": {
     "login": "Entrar",
