@@ -27,12 +27,12 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
-import type { Poll, PollOption } from '@/types/kanban';
+import type { Poll, PollOption, CreatePollData } from '@/types/kanban';
 
 interface PollModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (poll: Omit<Poll, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSubmit: (poll: CreatePollData) => void;
   poll?: Poll | null;
 }
 
@@ -120,10 +120,7 @@ export function PollModal({ isOpen, onClose, onSubmit, poll }: PollModalProps) {
       .map((opt, index) => ({
         id: opt.id,
         text: opt.text.trim(),
-        pollId: poll?.id || '',
         position: index,
-        createdAt: new Date(),
-        votes: poll?.options?.find(o => o.id === opt.id)?.votes || [],
       }));
 
     onSubmit({
@@ -134,8 +131,6 @@ export function PollModal({ isOpen, onClose, onSubmit, poll }: PollModalProps) {
       isActive: true,
       endsAt: null,
       cardId: poll?.cardId || '',
-      createdBy: poll?.createdBy || '',
-      votes: poll?.votes || [],
     });
 
     handleClose();

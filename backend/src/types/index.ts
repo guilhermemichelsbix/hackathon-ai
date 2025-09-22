@@ -158,3 +158,30 @@ export class ForbiddenError extends AppError {
     super(message, 403);
   }
 }
+
+// Poll types
+export interface CreatePollRequest {
+  question: string;
+  options: Array<{
+    id: string;
+    text: string;
+    position: number;
+  }>;
+  allowMultiple: boolean;
+  isSecret: boolean;
+  isActive: boolean;
+  endsAt: Date | null;
+  cardId: string;
+}
+
+export interface UpdatePollRequest {
+  question?: string;
+  allowMultiple?: boolean;
+  isSecret?: boolean;
+  isActive?: boolean;
+  endsAt?: Date | null;
+}
+
+export interface VotePollRequest {
+  optionIds: string[];
+}

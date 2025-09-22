@@ -75,6 +75,22 @@ export interface PollOption {
   percentage?: number;
 }
 
+export interface CreatePollOption {
+  id: string;
+  text: string;
+  position: number;
+}
+
+export interface CreatePollData {
+  question: string;
+  options: CreatePollOption[];
+  allowMultiple: boolean;
+  isSecret: boolean;
+  isActive: boolean;
+  endsAt: Date | null;
+  cardId: string;
+}
+
 export interface PollVote {
   id: string;
   pollId: string;
