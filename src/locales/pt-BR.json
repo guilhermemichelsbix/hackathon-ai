@@ -128,6 +128,7 @@
     "nameRequired": "Nome da coluna é obrigatório",
     "createSuccess": "Coluna criada com sucesso!",
     "updateSuccess": "Coluna atualizada com sucesso!",
+    "deleteSuccess": "Coluna excluída com sucesso!",
     "saveError": "Erro ao salvar coluna"
   },
   "comment": {
@@ -203,7 +204,9 @@
     "deleteCommentTitle": "Excluir comentário",
     "deleteCommentDescription": "Tem certeza que deseja excluir este comentário? Esta ação não pode ser desfeita.",
     "deletePollTitle": "Excluir enquete",
-    "deletePollDescription": "Tem certeza que deseja excluir esta enquete? Esta ação não pode ser desfeita."
+    "deletePollDescription": "Tem certeza que deseja excluir esta enquete? Esta ação não pode ser desfeita.",
+    "deleteColumnTitle": "Excluir coluna",
+    "deleteColumnDescription": "Tem certeza que deseja excluir esta coluna? Esta ação não pode ser desfeita e todos os cards nesta coluna serão movidos."
   },
   "error": {
     "generic": "Algo deu errado. Tente novamente.",

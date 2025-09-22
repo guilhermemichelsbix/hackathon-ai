@@ -100,10 +100,13 @@ export class ColumnService {
         throw new NotFoundError('Coluna');
       }
 
-      // Check if column has cards
+      // Delete all cards in the column first
       const cardsInColumn = await this.cardRepository.findByColumn(id);
       if (cardsInColumn.length > 0) {
-        throw new ValidationError('Não é possível excluir uma coluna que contém cards');
+        for (const card of cardsInColumn) {
+          await this.cardRepository.delete(card.id);
+        }
+        logger.info(`Deleted ${cardsInColumn.length} cards from column ${id}`);
       }
 
       // Delete column

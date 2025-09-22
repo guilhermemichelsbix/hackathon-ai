@@ -192,6 +192,29 @@ export function KanbanBoard() {
     setIsColumnFormOpen(false);
   };
 
+  const handleDeleteColumn = async (column: Column) => {
+    const confirmed = await confirm({
+      title: t('confirm.deleteColumnTitle'),
+      description: t('confirm.deleteColumnDescription'),
+      confirmText: t('confirm.confirm'),
+      cancelText: t('confirm.cancel'),
+      variant: 'destructive'
+    });
+
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      await useKanbanStore.getState().deleteColumn(column.id);
+      toast.success(t('column.deleteSuccess'));
+    } catch (error) {
+      console.error('Error deleting column:', error);
+      toast.error(t('error.generic'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCardDelete = async (card: Card) => {
     const confirmed = await confirm({
       title: t('confirm.deleteCardTitle'),
@@ -384,6 +407,7 @@ export function KanbanBoard() {
                       cards={cards}
                       onAddCard={handleAddCard}
                       onEditColumn={handleEditColumn}
+                      onDeleteColumn={handleDeleteColumn}
                       onCardClick={handleCardClick}
                       onCardEdit={handleCardEdit}
                       onCardDelete={handleCardDelete}
