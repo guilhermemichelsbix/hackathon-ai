@@ -54,11 +54,31 @@ export default function LoginPage() {
       toast.success(t('auth.loginSuccess'));
     } catch (error: unknown) {
       console.error('Login error:', error);
-      const errorMessage = error instanceof Error && 'response' in error 
-        ? (error as { response: { data: { message: string } } }).response.data.message 
-        : t('auth.loginError');
+      
+      // Extrair mensagem de erro - ApiError já tem message diretamente
+      let errorMessage = t('auth.loginError');
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
-      toast.error(t('auth.loginError'));
+      
+      // Toast específico baseado no tipo de erro
+      if (errorMessage.toLowerCase().includes('credenciais') || 
+          errorMessage.toLowerCase().includes('invalid') ||
+          errorMessage.toLowerCase().includes('incorrect')) {
+        toast.error(t('auth.invalidPassword'));
+      } else if (errorMessage.toLowerCase().includes('email') || 
+                 errorMessage.toLowerCase().includes('user') ||
+                 errorMessage.toLowerCase().includes('usuário')) {
+        toast.error(t('auth.invalidEmail'));
+      } else if (errorMessage.toLowerCase().includes('not found') || 
+                 errorMessage.toLowerCase().includes('não encontrado')) {
+        toast.error(t('auth.userNotFound'));
+      } else {
+        toast.error(t('auth.loginError'));
+      }
     } finally {
       setIsLoading(false);
     }

@@ -42,11 +42,11 @@ export default function RegisterPage() {
 
   const validateForm = () => {
     if (formData.password !== formData.confirmPassword) {
-      setError('As senhas não coincidem');
+      setError(t('auth.passwordMismatch'));
       return false;
     }
     if (formData.password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres');
+      setError(t('auth.passwordTooShort'));
       return false;
     }
     return true;
@@ -70,11 +70,33 @@ export default function RegisterPage() {
       setUser(user);
       await loadBoard();
       
-      toast.success('Conta criada com sucesso!');
-    } catch (error: any) {
+      toast.success(t('auth.registerSuccess'));
+    } catch (error: unknown) {
       console.error('Register error:', error);
-      setError(error.response?.data?.message || 'Erro ao criar conta');
-      toast.error('Erro ao criar conta');
+      
+      // Extrair mensagem de erro - ApiError já tem message diretamente
+      let errorMessage = t('auth.registerError');
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      
+      // Toast específico baseado no tipo de erro
+      if (errorMessage.toLowerCase().includes('email') || 
+          errorMessage.toLowerCase().includes('already') ||
+          errorMessage.toLowerCase().includes('exists') ||
+          errorMessage.toLowerCase().includes('já existe')) {
+        toast.error(t('auth.emailAlreadyExists'));
+      } else if (errorMessage.toLowerCase().includes('password') || 
+                 errorMessage.toLowerCase().includes('senha') ||
+                 errorMessage.toLowerCase().includes('short') ||
+                 errorMessage.toLowerCase().includes('curta')) {
+        toast.error(t('auth.passwordTooShort'));
+      } else {
+        toast.error(t('auth.registerError'));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -89,10 +111,10 @@ export default function RegisterPage() {
     >
       <div className="text-center">
         <CardTitle className="text-2xl font-bold text-foreground">
-          Criar nova conta
+          {t('auth.createAccount')}
         </CardTitle>
         <CardDescription className="text-muted-foreground mt-2">
-          Junte-se ao Kanban de Ideias
+          {t('auth.joinKanban')}
         </CardDescription>
       </div>
 
@@ -112,7 +134,7 @@ export default function RegisterPage() {
 
         <div className="space-y-2">
           <Label htmlFor="name" className="text-sm font-medium text-foreground">
-            Nome completo
+            {t('auth.name')}
           </Label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -131,7 +153,7 @@ export default function RegisterPage() {
 
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium text-foreground">
-            Email
+            {t('auth.email')}
           </Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -139,7 +161,7 @@ export default function RegisterPage() {
               id="email"
               name="email"
               type="email"
-              placeholder="seu@email.com"
+              placeholder={t('auth.emailPlaceholder')}
               value={formData.email}
               onChange={handleInputChange}
               className="pl-10 h-12 bg-background/50 border-border/50 focus:bg-background focus:border-border transition-all duration-200"
@@ -150,7 +172,7 @@ export default function RegisterPage() {
 
         <div className="space-y-2">
           <Label htmlFor="password" className="text-sm font-medium text-foreground">
-            Senha
+            {t('auth.password')}
           </Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -158,7 +180,7 @@ export default function RegisterPage() {
               id="password"
               name="password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
+              placeholder={t('auth.passwordPlaceholder')}
               value={formData.password}
               onChange={handleInputChange}
               className="pl-10 pr-10 h-12 bg-background/50 border-border/50 focus:bg-background focus:border-border transition-all duration-200"
@@ -182,7 +204,7 @@ export default function RegisterPage() {
 
         <div className="space-y-2">
           <Label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
-            Confirmar senha
+            {t('auth.confirmPassword')}
           </Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -190,7 +212,7 @@ export default function RegisterPage() {
               id="confirmPassword"
               name="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
-              placeholder="••••••••"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
               value={formData.confirmPassword}
               onChange={handleInputChange}
               className="pl-10 pr-10 h-12 bg-background/50 border-border/50 focus:bg-background focus:border-border transition-all duration-200"
@@ -220,12 +242,12 @@ export default function RegisterPage() {
           {isLoading ? (
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-              Criando conta...
+              {t('auth.creatingAccount')}
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
-              Criar conta
+              {t('auth.register')}
             </div>
           )}
         </Button>
@@ -235,19 +257,19 @@ export default function RegisterPage() {
         <Separator className="my-6" />
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="bg-card px-4 text-xs text-muted-foreground">
-            ou
+            {t('auth.or')}
           </span>
         </div>
       </div>
 
       <div className="text-center">
         <p className="text-sm text-muted-foreground">
-          Já tem uma conta?{' '}
+          {t('auth.haveAccount')}{' '}
           <Link
             to="/auth/login"
             className="text-primary hover:text-primary/80 font-medium transition-colors duration-200"
           >
-            Fazer login
+            {t('auth.login')}
           </Link>
         </p>
       </div>
