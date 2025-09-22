@@ -23,6 +23,7 @@ import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import { CardDetailsSheet } from './CardDetailsSheet';
 import { CardFormModal } from './CardFormModal';
+import { ColumnFormModal } from './ColumnFormModal';
 import { useKanbanStore } from '@/store/kanban';
 import { kanbanService } from '@/services/kanbanService';
 import type { Card, Column } from '@/types/kanban';
@@ -35,6 +36,8 @@ export function KanbanBoard() {
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedColumnForNew, setSelectedColumnForNew] = useState<string | null>(null);
+  const [editingColumn, setEditingColumn] = useState<Column | null>(null);
+  const [isColumnFormOpen, setIsColumnFormOpen] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   
@@ -177,6 +180,16 @@ export function KanbanBoard() {
 
   const handleCardEdit = (card: Card) => {
     setEditingCard(card);
+  };
+
+  const handleEditColumn = (column: Column) => {
+    setEditingColumn(column);
+    setIsColumnFormOpen(true);
+  };
+
+  const handleCloseColumnForm = () => {
+    setEditingColumn(null);
+    setIsColumnFormOpen(false);
   };
 
   const handleCardDelete = async (card: Card) => {
@@ -370,6 +383,7 @@ export function KanbanBoard() {
                       column={column}
                       cards={cards}
                       onAddCard={handleAddCard}
+                      onEditColumn={handleEditColumn}
                       onCardClick={handleCardClick}
                       onCardEdit={handleCardEdit}
                       onCardDelete={handleCardDelete}
@@ -409,6 +423,12 @@ export function KanbanBoard() {
         columnId={selectedColumnForNew}
         isOpen={isFormOpen || !!editingCard}
         onClose={handleCloseCardForm}
+      />
+
+      <ColumnFormModal
+        column={editingColumn}
+        isOpen={isColumnFormOpen || !!editingColumn}
+        onClose={handleCloseColumnForm}
       />
     </>
   );

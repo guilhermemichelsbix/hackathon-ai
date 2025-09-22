@@ -29,7 +29,7 @@ import type { Column } from '@/types/kanban';
 import { useKanbanStore } from '@/store/kanban';
 
 const columnFormSchema = z.object({
-  name: z.string().min(1, 'column.nameRequired').max(50, 'Nome muito longo'),
+  name: z.string().min(1, 'Nome da coluna é obrigatório').max(50, 'Nome muito longo'),
 });
 
 type ColumnFormData = z.infer<typeof columnFormSchema>;
