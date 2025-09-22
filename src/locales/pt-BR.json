@@ -13,8 +13,7 @@
     "update": "Atualizar",
     "confirm": "Confirmar",
     "characters": "caracteres",
-    "user": "Usuário",
-    "close": "Fechar"
+    "user": "Usuário"
   },
   "auth": {
     "login": "Entrar",
@@ -156,7 +155,9 @@
     "addOption": "Adicionar opção",
     "optionPlaceholder": "Digite uma opção...",
     "multipleChoice": "Múltipla escolha",
+    "multipleChoiceDescription": "Permitir múltiplas escolhas",
     "secretVote": "Voto secreto",
+    "secretVoteDescription": "Ocultar resultados até o final",
     "createPoll": "Criar Enquete",
     "editPoll": "Editar Enquete",
     "deletePoll": "Excluir Enquete",
@@ -177,7 +178,11 @@
     "onePollPerCard": "Este card já possui uma enquete. Apenas uma enquete por card é permitida.",
     "deleteError": "Erro ao excluir enquete",
     "saveError": "Erro ao salvar enquete",
-    "voteError": "Erro ao votar na enquete"
+    "voteError": "Erro ao votar na enquete",
+    "settings": "Configurações",
+    "pollSettings": "Configurações da enquete",
+    "minimumOptions": "Mínimo de 2 opções",
+    "maximumOptions": "Máximo de 10 opções"
   },
   "settings": {
     "language": "Idioma",

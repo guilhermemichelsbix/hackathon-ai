@@ -102,6 +102,9 @@ export function PollModal({ isOpen, onClose, onSubmit, poll }: PollModalProps) {
     if (validOptions.length < 2) {
       newErrors.options = t('poll.optionsRequired');
     }
+    if (validOptions.length > 10) {
+      newErrors.options = t('poll.maximumOptions');
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -117,7 +120,9 @@ export function PollModal({ isOpen, onClose, onSubmit, poll }: PollModalProps) {
       .map((opt, index) => ({
         id: opt.id,
         text: opt.text.trim(),
+        pollId: poll?.id || '',
         position: index,
+        createdAt: new Date(),
         votes: poll?.options?.find(o => o.id === opt.id)?.votes || [],
       }));
 
@@ -130,6 +135,7 @@ export function PollModal({ isOpen, onClose, onSubmit, poll }: PollModalProps) {
       endsAt: null,
       cardId: poll?.cardId || '',
       createdBy: poll?.createdBy || '',
+      votes: poll?.votes || [],
     });
 
     handleClose();
@@ -148,8 +154,10 @@ export function PollModal({ isOpen, onClose, onSubmit, poll }: PollModalProps) {
   };
 
   const addOption = () => {
-    const newId = (options.length + 1).toString();
-    setOptions([...options, { id: newId, text: '' }]);
+    if (options.length < 10) {
+      const newId = (options.length + 1).toString();
+      setOptions([...options, { id: newId, text: '' }]);
+    }
   };
 
   const removeOption = (id: string) => {
@@ -237,10 +245,16 @@ export function PollModal({ isOpen, onClose, onSubmit, poll }: PollModalProps) {
               variant="outline"
               size="sm"
               onClick={addOption}
-              className="w-full border-dashed border-border/50 hover:border-border hover:bg-secondary/50"
+              disabled={options.length >= 10}
+              className="w-full border-dashed border-border/50 hover:border-border hover:bg-secondary/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="h-4 w-4 mr-2" />
               {t('poll.addOption')}
+              {options.length >= 10 && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  ({t('poll.maximumOptions')})
+                </span>
+              )}
             </Button>
 
             {errors.options && (
@@ -252,13 +266,16 @@ export function PollModal({ isOpen, onClose, onSubmit, poll }: PollModalProps) {
 
           {/* Settings */}
           <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-foreground">
+              {t('poll.pollSettings')}
+            </h4>
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <Label className="text-sm font-medium text-foreground">
                   {t('poll.multipleChoice')}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Permitir múltiplas escolhas
+                  {t('poll.multipleChoiceDescription')}
                 </p>
               </div>
               <Switch
@@ -273,7 +290,7 @@ export function PollModal({ isOpen, onClose, onSubmit, poll }: PollModalProps) {
                   {t('poll.secretVote')}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Ocultar resultados até o final
+                  {t('poll.secretVoteDescription')}
                 </p>
               </div>
               <Switch

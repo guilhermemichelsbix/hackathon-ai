@@ -13,8 +13,7 @@
     "update": "Update",
     "confirm": "Confirm",
     "characters": "characters",
-    "user": "User",
-    "close": "Close"
+    "user": "User"
   },
   "auth": {
     "login": "Login",
@@ -156,7 +155,9 @@
     "addOption": "Add option",
     "optionPlaceholder": "Enter an option...",
     "multipleChoice": "Multiple choice",
+    "multipleChoiceDescription": "Allow multiple choices",
     "secretVote": "Secret vote",
+    "secretVoteDescription": "Hide results until the end",
     "createPoll": "Create Poll",
     "editPoll": "Edit Poll",
     "deletePoll": "Delete Poll",
@@ -177,7 +178,11 @@
     "onePollPerCard": "This card already has a poll. Only one poll per card is allowed.",
     "deleteError": "Error deleting poll",
     "saveError": "Error saving poll",
-    "voteError": "Error voting on poll"
+    "voteError": "Error voting on poll",
+    "settings": "Settings",
+    "pollSettings": "Poll settings",
+    "minimumOptions": "Minimum 2 options",
+    "maximumOptions": "Maximum 10 options"
   },
   "settings": {
     "language": "Language",
