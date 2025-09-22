@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { Card, Column, User, Board, KanbanState, Comment, Vote, KanbanEvent } from '@/types/kanban';
+import type { Card, Column, User, Board, KanbanState, Comment, Vote, KanbanEvent, Poll } from '@/types/kanban';
 import { kanbanService } from '@/services/kanbanService';
 import { toast } from 'sonner';
 
@@ -62,10 +62,19 @@ interface KanbanActions {
   // Drag and drop
   setDraggedCard: (card: Card | null, sourceColumnId?: string, sourcePosition?: number) => void;
   
+  // Poll actions
+  createPoll: (poll: Omit<Poll, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Poll>;
+  updatePoll: (pollId: string, updates: Partial<Poll>) => Promise<Poll>;
+  deletePoll: (pollId: string) => Promise<void>;
+  votePoll: (pollId: string, optionIds: string[], userId: string) => Promise<void>;
+  
+  // Real-time poll actions (synchronous)
+  addPoll: (poll: Poll) => void;
+  updatePollData: (pollId: string, updates: Partial<Poll>) => void;
+  removePoll: (pollId: string) => void;
+
   // Real-time events
   handleRealtimeEvent: (event: KanbanEvent) => void;
-  connectToRealtime: () => void;
-  disconnectFromRealtime: () => void;
   
   // Selectors
   getCardsByColumn: (columnId: string) => Card[];
@@ -341,7 +350,13 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
       
       reorderColumns: (columns) =>
         set((state) => {
+          // Update columns array
           state.board.columns = columns;
+          // Update column order based on new positions
+          state.columnOrder = columns
+            .sort((a, b) => a.position - b.position)
+            .map(col => col.id);
+          console.log('✅ Columns reordered in real-time:', state.columnOrder);
         }),
       
       reorderColumnsData: async (columns) => {
@@ -405,26 +420,15 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
           const newOrder = [...state.columnOrder];
           [newOrder[currentIndex - 1], newOrder[currentIndex]] = [newOrder[currentIndex], newOrder[currentIndex - 1]];
           
-          // Update local state immediately for smooth UX
-          set((state) => {
-            state.columnOrder = newOrder;
-            newOrder.forEach((id, index) => {
-              const column = state.board.columns.find(c => c.id === id);
-              if (column) {
-                column.position = index;
-              }
-            });
-          });
-          
-          // Save to backend
+          // Save to backend - Socket.IO will handle state update
           try {
             const columnsToUpdate = newOrder.map((id, index) => ({ id, position: index }));
             await kanbanService.reorderColumns(columnsToUpdate);
+            console.log('✅ Column moved left via API - Socket.IO will update state');
             toast.success('Ordem das colunas atualizada!');
           } catch (error) {
             console.error('Error moving column left:', error);
             toast.error('Erro ao mover coluna');
-            // Could implement rollback here if needed
           }
         }
       },
@@ -437,26 +441,15 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
           const newOrder = [...state.columnOrder];
           [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
           
-          // Update local state immediately for smooth UX
-          set((state) => {
-            state.columnOrder = newOrder;
-            newOrder.forEach((id, index) => {
-              const column = state.board.columns.find(c => c.id === id);
-              if (column) {
-                column.position = index;
-              }
-            });
-          });
-          
-          // Save to backend
+          // Save to backend - Socket.IO will handle state update
           try {
             const columnsToUpdate = newOrder.map((id, index) => ({ id, position: index }));
             await kanbanService.reorderColumns(columnsToUpdate);
+            console.log('✅ Column moved right via API - Socket.IO will update state');
             toast.success('Ordem das colunas atualizada!');
           } catch (error) {
             console.error('Error moving column right:', error);
             toast.error('Erro ao mover coluna');
-            // Could implement rollback here if needed
           }
         }
       },
@@ -534,20 +527,23 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
         set((state) => {
           const cardIndex = state.board.cards.findIndex((c) => c.id === comment.cardId);
           if (cardIndex !== -1) {
-            state.board.cards[cardIndex].comments.push(comment);
+            // Check if comment already exists to avoid duplicates
+            const existingCommentIndex = state.board.cards[cardIndex].comments.findIndex(c => c.id === comment.id);
+            if (existingCommentIndex === -1) {
+              state.board.cards[cardIndex].comments.push(comment);
+              console.log('✅ Comment added in real-time:', comment.id);
+            } else {
+              console.log('⚠️ Comment already exists, updating instead:', comment.id);
+              state.board.cards[cardIndex].comments[existingCommentIndex] = comment;
+            }
           }
         }),
       
       createComment: async (cardId, data) => {
         try {
+          // Apenas chama a API - Socket.IO vai atualizar o estado
           const comment = await kanbanService.createComment(cardId, data);
-          set((state) => {
-            const cardIndex = state.board.cards.findIndex((c) => c.id === cardId);
-            if (cardIndex !== -1) {
-              state.board.cards[cardIndex].comments.push(comment);
-            }
-          });
-          toast.success('Comentário adicionado!');
+          console.log('✅ Comentário criado via API - Socket.IO vai atualizar o estado');
           return comment;
         } catch (error) {
           console.error('Error creating comment:', error);
@@ -569,17 +565,9 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
       
       updateCommentData: async (commentId, data) => {
         try {
+          // Apenas chama a API - Socket.IO vai atualizar o estado
           const comment = await kanbanService.updateComment(commentId, data);
-          set((state) => {
-            for (const card of state.board.cards) {
-              const commentIndex = card.comments.findIndex((c) => c.id === commentId);
-              if (commentIndex !== -1) {
-                card.comments[commentIndex] = comment;
-                break;
-              }
-            }
-          });
-          toast.success('Comentário atualizado!');
+          console.log('✅ Comentário atualizado via API - Socket.IO vai atualizar o estado');
           return comment;
         } catch (error) {
           console.error('Error updating comment:', error);
@@ -597,13 +585,9 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
       
       deleteComment: async (commentId) => {
         try {
+          // Apenas chama a API - Socket.IO vai atualizar o estado
           await kanbanService.deleteComment(commentId);
-          set((state) => {
-            for (const card of state.board.cards) {
-              card.comments = card.comments.filter((c) => c.id !== commentId);
-            }
-          });
-          toast.success('Comentário excluído!');
+          console.log('✅ Comentário deletado via API - Socket.IO vai atualizar o estado');
         } catch (error) {
           console.error('Error deleting comment:', error);
           toast.error('Erro ao excluir comentário');
@@ -715,23 +699,128 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
             break;
         }
       },
-      
-      connectToRealtime: () => {
-        kanbanService.connectToEvents();
-        kanbanService.addEventListener('card.created', get().handleRealtimeEvent);
-        kanbanService.addEventListener('card.updated', get().handleRealtimeEvent);
-        kanbanService.addEventListener('card.moved', get().handleRealtimeEvent);
-        kanbanService.addEventListener('card.deleted', get().handleRealtimeEvent);
-        kanbanService.addEventListener('vote.added', get().handleRealtimeEvent);
-        kanbanService.addEventListener('vote.removed', get().handleRealtimeEvent);
-        kanbanService.addEventListener('comment.added', get().handleRealtimeEvent);
-        kanbanService.addEventListener('comment.updated', get().handleRealtimeEvent);
-        kanbanService.addEventListener('comment.deleted', get().handleRealtimeEvent);
+
+      // Poll actions
+      createPoll: async (pollData) => {
+        try {
+          const poll = await kanbanService.createPoll(pollData);
+          set((state) => {
+            const cardIndex = state.board.cards.findIndex((c) => c.id === poll.cardId);
+            if (cardIndex !== -1) {
+              // Check if poll already exists to avoid duplicates
+              const existingPollIndex = state.board.cards[cardIndex].polls.findIndex(p => p.id === poll.id);
+              if (existingPollIndex === -1) {
+                state.board.cards[cardIndex].polls.push(poll);
+                console.log('✅ Poll created and added to card:', poll.id);
+              } else {
+                console.log('⚠️ Poll already exists during creation, updating instead:', poll.id);
+                state.board.cards[cardIndex].polls[existingPollIndex] = poll;
+              }
+            } else {
+              console.error('❌ Card not found for poll:', poll.cardId);
+            }
+          });
+          return poll;
+        } catch (error) {
+          console.error('Error creating poll:', error);
+          throw error;
+        }
       },
-      
-      disconnectFromRealtime: () => {
-        kanbanService.disconnectFromEvents();
+
+      updatePoll: async (pollId, updates) => {
+        try {
+          const poll = await kanbanService.updatePoll(pollId, updates);
+          set((state) => {
+            for (const card of state.board.cards) {
+              const pollIndex = card.polls.findIndex((p) => p.id === pollId);
+              if (pollIndex !== -1) {
+                card.polls[pollIndex] = poll;
+                console.log('✅ Poll updated:', pollId);
+                break;
+              }
+            }
+          });
+          return poll;
+        } catch (error) {
+          console.error('Error updating poll:', error);
+          throw error;
+        }
       },
+
+      deletePoll: async (pollId) => {
+        try {
+          await kanbanService.deletePoll(pollId);
+          set((state) => {
+            for (const card of state.board.cards) {
+              const initialLength = card.polls.length;
+              card.polls = card.polls.filter((p) => p.id !== pollId);
+              if (initialLength !== card.polls.length) {
+                console.log('✅ Poll deleted:', pollId);
+                break;
+              }
+            }
+          });
+        } catch (error) {
+          console.error('Error deleting poll:', error);
+          throw error;
+        }
+      },
+
+      votePoll: async (pollId, optionIds, userId) => {
+        try {
+          // Apenas fazer a chamada da API - Socket.IO vai atualizar o estado
+          await kanbanService.votePoll(pollId, { optionIds });
+          console.log('✅ Vote submitted to poll:', pollId, 'for user:', userId);
+          // Não atualizar o estado local aqui - deixar o Socket.IO fazer isso
+        } catch (error) {
+          console.error('Error voting on poll:', error);
+          throw error;
+        }
+      },
+
+      // Real-time poll actions (synchronous)
+      addPoll: (poll) =>
+        set((state) => {
+          const cardIndex = state.board.cards.findIndex((c) => c.id === poll.cardId);
+          if (cardIndex !== -1) {
+            // Check if poll already exists to avoid duplicates
+            const existingPollIndex = state.board.cards[cardIndex].polls.findIndex(p => p.id === poll.id);
+            if (existingPollIndex === -1) {
+              state.board.cards[cardIndex].polls.push(poll);
+              console.log('✅ Poll added to card in real-time:', poll.id);
+            } else {
+              console.log('⚠️ Poll already exists, updating instead:', poll.id);
+              state.board.cards[cardIndex].polls[existingPollIndex] = poll;
+            }
+          } else {
+            console.error('❌ Card not found for poll:', poll.cardId);
+          }
+        }),
+
+      updatePollData: (pollId, updates) =>
+        set((state) => {
+          for (const card of state.board.cards) {
+            const pollIndex = card.polls.findIndex((p) => p.id === pollId);
+            if (pollIndex !== -1) {
+              Object.assign(card.polls[pollIndex], updates);
+              console.log('✅ Poll updated in real-time:', pollId);
+              break;
+            }
+          }
+        }),
+
+      removePoll: (pollId) =>
+        set((state) => {
+          for (const card of state.board.cards) {
+            const initialLength = card.polls.length;
+            card.polls = card.polls.filter((p) => p.id !== pollId);
+            if (initialLength !== card.polls.length) {
+              console.log('✅ Poll removed in real-time:', pollId);
+              break;
+            }
+          }
+        }),
+      
       
       // Selectors
       getCardsByColumn: (columnId) => {

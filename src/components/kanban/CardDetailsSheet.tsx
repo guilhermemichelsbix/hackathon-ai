@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR, enUS } from 'date-fns/locale';
 import { useTheme } from '@/hooks/useTheme';
+import { toast } from 'sonner';
 import {
   Heart,
   MessageCircle,
@@ -14,6 +15,8 @@ import {
   MoreVertical,
   X,
   Trash2,
+  BarChart3,
+  Plus,
 } from 'lucide-react';
 
 import {
@@ -34,8 +37,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import type { Card, Comment } from '@/types/kanban';
+import type { Card, Comment, Poll } from '@/types/kanban';
 import { useKanbanStore, useCurrentUser } from '@/store/kanban';
+import { PollModal } from './PollModal';
+import { PollCard } from './PollCard';
 
 interface CardDetailsSheetProps {
   card: Card | null;
@@ -57,41 +62,49 @@ export function CardDetailsSheet({
   const [newComment, setNewComment] = useState('');
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
+  const [editingPoll, setEditingPoll] = useState<Poll | null>(null);
   
   const currentUser = useCurrentUser();
-  const { getUserVoteForCard, addComment, updateComment, removeComment } = useKanbanStore();
+  const { getUserVoteForCard, createComment, updateCommentData, deleteComment, board, createPoll, updatePoll, deletePoll, votePoll } = useKanbanStore();
 
   if (!card) return null;
 
-  const creator = card.creator;
-  const userHasVoted = currentUser ? getUserVoteForCard(card.id, currentUser.id) : false;
-  const canEdit = currentUser?.id === card.createdBy;
+  // Get the most up-to-date card from the store
+  const currentCard = board.cards.find(c => c.id === card.id) || card;
+  
+  // Debug: Log current card data
+  console.log('🔍 CardDetailsSheet - Current card:', currentCard);
+  console.log('🔍 CardDetailsSheet - Card polls:', currentCard.polls);
+  console.log('🔍 CardDetailsSheet - Card polls length:', currentCard.polls?.length || 0);
+  console.log('🔍 CardDetailsSheet - Poll IDs:', currentCard.polls?.map(p => p.id) || []);
+  
+  const creator = currentCard.creator;
+  const userHasVoted = currentUser ? getUserVoteForCard(currentCard.id, currentUser.id) : false;
+  const canEdit = currentUser?.id === currentCard.createdBy;
   const locale = i18n.language === 'pt-BR' ? ptBR : enUS;
 
   const handleVote = () => {
-    onVote?.(card);
+    onVote?.(currentCard);
   };
 
   const handleEdit = () => {
-    onEdit?.(card);
+    onEdit?.(currentCard);
     onClose();
   };
 
   const handleAddComment = async () => {
     if (!newComment.trim() || !currentUser) return;
 
-    const comment: Comment = {
-      id: `comment-${Date.now()}`,
-      cardId: card.id,
-      body: newComment.trim(),
-      createdBy: currentUser.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      user: currentUser,
-    };
-
-    addComment(comment);
-    setNewComment('');
+    try {
+      // Chama a API para criar o comentário - Socket.IO vai atualizar o estado
+      await createComment(currentCard.id, { body: newComment.trim() });
+      setNewComment('');
+      console.log('✅ Comentário criado via API - Socket.IO vai atualizar o estado');
+    } catch (error) {
+      console.error('❌ Erro ao criar comentário:', error);
+      toast.error('Erro ao adicionar comentário');
+    }
   };
 
   const handleEditComment = (comment: Comment) => {
@@ -99,16 +112,19 @@ export function CardDetailsSheet({
     setEditCommentText(comment.body);
   };
 
-  const handleSaveEditComment = (commentId: string) => {
+  const handleSaveEditComment = async (commentId: string) => {
     if (!editCommentText.trim()) return;
     
-    updateComment(commentId, {
-      body: editCommentText.trim(),
-      updatedAt: new Date(),
-    });
-    
-    setEditingComment(null);
-    setEditCommentText('');
+    try {
+      // Chama a API para atualizar o comentário - Socket.IO vai atualizar o estado
+      await updateCommentData(commentId, { body: editCommentText.trim() });
+      setEditingComment(null);
+      setEditCommentText('');
+      console.log('✅ Comentário atualizado via API - Socket.IO vai atualizar o estado');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar comentário:', error);
+      toast.error('Erro ao atualizar comentário');
+    }
   };
 
   const handleCancelEditComment = () => {
@@ -116,12 +132,92 @@ export function CardDetailsSheet({
     setEditCommentText('');
   };
 
-  const handleDeleteComment = (commentId: string) => {
+  const handleDeleteComment = async (commentId: string) => {
     if (!confirm(t('comment.confirmDeleteComment'))) return;
-    removeComment(commentId);
+    
+    try {
+      // Chama a API para deletar o comentário - Socket.IO vai atualizar o estado
+      await deleteComment(commentId);
+      console.log('✅ Comentário deletado via API - Socket.IO vai atualizar o estado');
+    } catch (error) {
+      console.error('❌ Erro ao deletar comentário:', error);
+      toast.error('Erro ao deletar comentário');
+    }
   };
 
-  const sortedComments = [...card.comments].sort(
+  // Poll handlers
+  const handleCreatePoll = () => {
+    // Check if card already has a poll
+    if (currentCard.polls && currentCard.polls.length > 0) {
+      toast.error('Este card já possui uma enquete. Apenas uma enquete por card é permitida.');
+      return;
+    }
+    
+    setEditingPoll(null);
+    setIsPollModalOpen(true);
+  };
+
+  const handleEditPoll = (poll: Poll) => {
+    console.log('🔍 Edit poll clicked:', poll);
+    setEditingPoll(poll);
+    setIsPollModalOpen(true);
+  };
+
+  const handleDeletePoll = async (pollId: string) => {
+    if (!confirm(t('poll.pollDeleted'))) return;
+    try {
+      await deletePoll(pollId);
+      toast.success(t('poll.pollDeleted'));
+    } catch (error) {
+      console.error('Error deleting poll:', error);
+      toast.error('Erro ao excluir enquete');
+    }
+  };
+
+  const handlePollSubmit = async (pollData: Omit<Poll, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      if (editingPoll) {
+        // Update existing poll
+        await updatePoll(editingPoll.id, {
+          ...pollData,
+          updatedAt: new Date(),
+        });
+        toast.success(t('poll.pollUpdated'));
+      } else {
+        // Create new poll - ensure cardId is set correctly
+        const pollToCreate = {
+          ...pollData,
+          cardId: currentCard.id, // Ensure cardId is set from current card
+          createdBy: currentUser?.id || '', // Ensure createdBy is set from current user
+        };
+        
+        console.log('🔍 Creating poll:', pollToCreate);
+        console.log('🔍 Current card before:', currentCard);
+        
+        await createPoll(pollToCreate);
+        toast.success(t('poll.pollCreated'));
+      }
+      
+      setIsPollModalOpen(false);
+      setEditingPoll(null);
+    } catch (error) {
+      console.error('Error submitting poll:', error);
+      toast.error('Erro ao salvar enquete');
+    }
+  };
+
+  const handlePollVote = async (pollId: string, optionIds: string[]) => {
+    if (!currentUser) return;
+    try {
+      await votePoll(pollId, optionIds, currentUser.id);
+      toast.success(t('poll.voteRegistered'));
+    } catch (error) {
+      console.error('Error voting on poll:', error);
+      toast.error('Erro ao votar na enquete');
+    }
+  };
+
+  const sortedComments = [...currentCard.comments].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
@@ -133,7 +229,7 @@ export function CardDetailsSheet({
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 space-y-3">
               <SheetTitle className="text-xl font-bold leading-tight text-foreground tracking-tight text-left pr-6">
-                {card.title}
+                {currentCard.title}
               </SheetTitle>
               
               {/* Meta Information */}
@@ -141,15 +237,15 @@ export function CardDetailsSheet({
                 <div className="flex items-center gap-2">
                   <Avatar className="h-7 w-7 shadow-sm ring-1 ring-border/20">
                     <AvatarFallback className="text-xs font-medium bg-primary text-primary-foreground">
-                      {creator?.name?.charAt(0).toUpperCase() || 'U'}
+                      {creator?.name?.charAt(0).toUpperCase() || t('common.user')}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col">
                     <span className="text-xs font-medium text-foreground">
-                      {creator?.name || 'Usuário'}
+                      {creator?.name || t('common.user')}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(card.createdAt, { addSuffix: true, locale })}
+                      {formatDistanceToNow(currentCard.createdAt, { addSuffix: true, locale })}
                     </span>
                   </div>
                 </div>
@@ -171,16 +267,16 @@ export function CardDetailsSheet({
         </div>
 
         {/* Content Section */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ contain: 'layout style' }}>
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="p-4 space-y-6">
             {/* Description Card */}
             <div className="bg-secondary/10 border border-border/20 rounded-lg p-4 space-y-2">
               <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                 <div className="h-1 w-1 rounded-full bg-primary"></div>
-                Descrição
+                {t('card.description')}
               </h4>
               <p className="text-foreground leading-relaxed text-sm">
-                {card.description}
+                {currentCard.description}
               </p>
             </div>
 
@@ -199,7 +295,7 @@ export function CardDetailsSheet({
                 `}
               >
                 <Heart className={`h-3 w-3 ${userHasVoted ? 'fill-current' : ''}`} />
-                <span className="font-semibold">{card.votes.length}</span>
+                <span className="font-semibold">{currentCard.votes.length}</span>
                 <span className="text-xs">
                   {userHasVoted ? t('card.unvote') : t('card.vote')}
                 </span>
@@ -207,22 +303,72 @@ export function CardDetailsSheet({
 
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/20 text-muted-foreground border border-border/20 text-xs">
                 <MessageCircle className="h-3 w-3" />
-                <span className="font-medium">{card.comments.length}</span>
+                <span className="font-medium">{currentCard.comments.length}</span>
                 <span className="text-xs">{t('card.comments')}</span>
               </div>
             </div>
           </div>
 
+          {/* Polls Section - Visible to all users */}
+          <div className="bg-secondary/10 border border-border/20 rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground tracking-tight flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                {t('poll.title')}
+              </h3>
+              {/* Only show create button to card owner */}
+              {canEdit && (
+                <Button
+                  onClick={handleCreatePoll}
+                  size="sm"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 h-7 px-2 text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  {t('poll.createPoll')}
+                </Button>
+              )}
+            </div>
+
+            {currentCard.polls && currentCard.polls.length > 0 ? (
+              <div className="space-y-3">
+                {currentCard.polls
+                  .filter((poll, index, self) => 
+                    // Remove duplicates by keeping only the first occurrence of each poll ID
+                    self.findIndex(p => p.id === poll.id) === index
+                  )
+                  .map((poll) => {
+                    console.log('🔍 Rendering PollCard for poll:', poll.id);
+                    return (
+                      <PollCard
+                        key={poll.id}
+                        poll={poll}
+                        onVote={handlePollVote}
+                        onEdit={canEdit ? handleEditPoll : undefined}
+                        onDelete={canEdit ? handleDeletePoll : undefined}
+                      />
+                    );
+                  })}
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-secondary/20 border border-border/20 rounded-lg">
+                <BarChart3 className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  {canEdit ? t('poll.noPolls') : t('poll.noPollsYet')}
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Comments Section */}
           <div className="border-t border-border/30 bg-secondary/5">
-            <div className="p-4 space-y-4 sheet-comments-container">
+            <div className="p-4 space-y-4">
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-foreground tracking-tight">
                   {t('card.comments')}
                 </h3>
                 <div className="h-4 w-px bg-border/30"></div>
                 <span className="text-xs font-medium text-muted-foreground">
-                  {card.comments.length} {card.comments.length === 1 ? 'comentário' : 'comentários'}
+                  {currentCard.comments.length} {currentCard.comments.length === 1 ? t('comment.single') : t('comment.plural')}
                 </span>
               </div>
 
@@ -240,7 +386,7 @@ export function CardDetailsSheet({
                         {currentUser.name}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        Adicionar comentário
+                        {t('comment.addComment')}
                       </span>
                     </div>
                   </div>
@@ -254,7 +400,7 @@ export function CardDetailsSheet({
                     />
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">
-                        {newComment.length}/500 caracteres
+                        {newComment.length}/500 {t('common.characters')}
                       </span>
                       <Button
                         onClick={handleAddComment}
@@ -286,7 +432,7 @@ export function CardDetailsSheet({
                           <div className="flex gap-3">
                             <Avatar className="h-6 w-6 shadow-sm ring-1 ring-border/20 flex-shrink-0">
                               <AvatarFallback className="text-xs font-medium bg-primary text-primary-foreground">
-                                {commentUser?.name?.charAt(0).toUpperCase() || 'U'}
+                                {commentUser?.name?.charAt(0).toUpperCase() || t('common.user')}
                               </AvatarFallback>
                             </Avatar>
                             
@@ -294,7 +440,7 @@ export function CardDetailsSheet({
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs font-medium text-foreground">
-                                    {commentUser?.name || 'Usuário'}
+                                    {commentUser?.name || t('common.user')}
                                   </span>
                                   <div className="h-1 w-1 rounded-full bg-muted-foreground/50"></div>
                                   <span className="text-xs text-muted-foreground">
@@ -346,7 +492,7 @@ export function CardDetailsSheet({
                                   />
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-muted-foreground">
-                                      {editCommentText.length}/500 caracteres
+                                      {editCommentText.length}/500 {t('common.characters')}
                                     </span>
                                     <div className="flex gap-2">
                                       <Button
@@ -399,6 +545,17 @@ export function CardDetailsSheet({
           </div>
         </div>
       </SheetContent>
+
+      {/* Poll Modal */}
+      <PollModal
+        isOpen={isPollModalOpen}
+        onClose={() => {
+          setIsPollModalOpen(false);
+          setEditingPoll(null);
+        }}
+        onSubmit={handlePollSubmit}
+        poll={editingPoll}
+      />
     </Sheet>
   );
 }

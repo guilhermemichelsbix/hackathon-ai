@@ -11,19 +11,27 @@
     "add": "Adicionar",
     "create": "Criar",
     "update": "Atualizar",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "characters": "caracteres",
+    "user": "Usuário"
   },
   "auth": {
     "login": "Entrar",
     "logout": "Sair",
     "email": "Email",
     "password": "Senha",
+    "confirmPassword": "Confirmar senha",
+    "confirmPasswordPlaceholder": "Confirme sua senha",
     "name": "Nome",
+    "namePlaceholder": "Seu nome completo",
     "register": "Cadastrar",
     "forgotPassword": "Esqueceu a senha?",
     "loginSuccess": "Login realizado com sucesso!",
     "loginError": "Erro ao fazer login",
-    "logoutSuccess": "Logout realizado com sucesso!"
+    "logoutSuccess": "Logout realizado com sucesso!",
+    "myAccount": "Minha Conta",
+    "profile": "Perfil",
+    "settings": "Configurações"
   },
   "kanban": {
     "title": "Kanban de Ideias",
@@ -34,7 +42,14 @@
     "allColumns": "Todas as colunas",
     "noCards": "Nenhum card encontrado",
     "noCardsDescription": "Que tal criar sua primeira ideia?",
-    "dragHint": "Arraste os cards entre as colunas para alterar o status"
+    "dragHint": "Arraste os cards entre as colunas para alterar o status",
+    "columns": "Colunas",
+    "columnVisibility": "Visibilidade das Colunas",
+    "showAllColumns": "Mostrar todas as colunas",
+    "addColumn": "Coluna",
+    "cards": "cards",
+    "votes": "votos",
+    "comments": "comentários"
   },
   "card": {
     "title": "Título",
@@ -56,7 +71,13 @@
     "updateSuccess": "Card atualizado com sucesso!",
     "deleteSuccess": "Card excluído com sucesso!",
     "voteSuccess": "Voto registrado!",
-    "unvoteSuccess": "Voto removido!"
+    "unvoteSuccess": "Voto removido!",
+    "titlePlaceholder": "Digite o título da sua ideia...",
+    "descriptionPlaceholder": "Descreva sua ideia detalhadamente...",
+    "titleTooLong": "Título muito longo",
+    "descriptionTooLong": "Descrição muito longa",
+    "editSubtitle": "Atualize os detalhes da sua ideia",
+    "createSubtitle": "Crie uma nova ideia inovadora"
   },
   "column": {
     "backlog": "Backlog",
@@ -67,8 +88,17 @@
     "addColumn": "Adicionar Coluna",
     "editColumn": "Editar Coluna",
     "deleteColumn": "Excluir Coluna",
+    "hideColumn": "Ocultar Coluna",
+    "moveLeft": "Mover para Esquerda",
+    "moveRight": "Mover para Direita",
     "columnName": "Nome da coluna",
-    "columnDescription": "Descrição da coluna"
+    "columnDescription": "Descrição da coluna",
+    "selectColumn": "Selecione uma coluna",
+    "columnNamePlaceholder": "Digite o nome da coluna...",
+    "nameRequired": "Nome da coluna é obrigatório",
+    "createSuccess": "Coluna criada com sucesso!",
+    "updateSuccess": "Coluna atualizada com sucesso!",
+    "saveError": "Erro ao salvar coluna"
   },
   "comment": {
     "addComment": "Adicionar comentário",
@@ -81,7 +111,36 @@
     "updateSuccess": "Comentário atualizado!",
     "deleteSuccess": "Comentário excluído!",
     "noComments": "Nenhum comentário ainda",
-    "beFirst": "Seja o primeiro a comentar!"
+    "beFirst": "Seja o primeiro a comentar!",
+    "single": "comentário",
+    "plural": "comentários"
+  },
+  "poll": {
+    "title": "Enquete",
+    "question": "Pergunta da enquete",
+    "questionPlaceholder": "Digite sua pergunta...",
+    "options": "Opções",
+    "addOption": "Adicionar opção",
+    "optionPlaceholder": "Digite uma opção...",
+    "multipleChoice": "Múltipla escolha",
+    "secretVote": "Voto secreto",
+    "createPoll": "Criar Enquete",
+    "editPoll": "Editar Enquete",
+    "deletePoll": "Excluir Enquete",
+    "vote": "Votar",
+    "votes": "votos",
+    "totalVotes": "Total de votos",
+    "noVotes": "Nenhum voto ainda",
+    "beFirst": "Seja o primeiro a votar!",
+    "pollCreated": "Enquete criada com sucesso!",
+    "pollUpdated": "Enquete atualizada com sucesso!",
+    "pollDeleted": "Enquete excluída com sucesso!",
+    "voteRegistered": "Voto registrado!",
+    "questionRequired": "Pergunta é obrigatória",
+    "optionsRequired": "Pelo menos 2 opções são necessárias",
+    "optionRequired": "Opção é obrigatória",
+    "noPolls": "Nenhuma enquete criada ainda",
+    "noPollsYet": "Ainda não há enquetes nesta ideia"
   },
   "settings": {
     "language": "Idioma",

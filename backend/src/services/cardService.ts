@@ -3,7 +3,7 @@ import { ColumnRepository } from '@/repositories/columnRepository';
 import { CreateCardRequest, UpdateCardRequest, MoveCardRequest, CardFilters } from '@/types';
 import { AppError, ValidationError, NotFoundError, ForbiddenError } from '@/types';
 import { logger } from '@/utils/logger';
-import { sseManager } from '@/utils/sseManager';
+import { getSocketManager } from '@/utils/socketManager';
 
 export class CardService {
   private cardRepository: CardRepository;
@@ -38,7 +38,10 @@ export class CardService {
       logger.info(`Card created: ${card.id} by user: ${userId}`);
 
       // Broadcast real-time event
-      sseManager.broadcastCardCreated(card);
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastCardCreated(card);
+      }
 
       return card;
     } catch (error) {
@@ -102,7 +105,10 @@ export class CardService {
       logger.info(`Card updated: ${card.id} by user: ${userId}`);
 
       // Broadcast real-time event
-      sseManager.broadcastCardUpdated(card);
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastCardUpdated(card);
+      }
 
       return card;
     } catch (error) {
@@ -130,7 +136,10 @@ export class CardService {
       logger.info(`Card deleted: ${id} by user: ${userId}`);
 
       // Broadcast real-time event
-      sseManager.broadcastCardDeleted(id);
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastCardDeleted(id);
+      }
 
       return { success: true };
     } catch (error) {
@@ -159,12 +168,15 @@ export class CardService {
       logger.info(`Card moved: ${id} to column: ${data.toColumnId} by user: ${userId}`);
 
       // Broadcast real-time event
-      sseManager.broadcastCardMoved({
-        cardId: id,
-        fromColumnId: existingCard.columnId,
-        toColumnId: data.toColumnId,
-        position: data.position,
-      });
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastCardMoved(
+          id,
+          existingCard.columnId,
+          data.toColumnId,
+          data.position
+        );
+      }
 
       return card;
     } catch (error) {

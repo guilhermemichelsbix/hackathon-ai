@@ -4,11 +4,15 @@ import type {
   Column, 
   Comment, 
   Vote,
+  Poll,
   CreateCardRequest,
   UpdateCardRequest,
   MoveCardRequest,
   CreateCommentRequest,
   UpdateCommentRequest,
+  CreatePollRequest,
+  UpdatePollRequest,
+  VotePollRequest,
   CardFilters,
   KanbanEvent
 } from '@/types/kanban';
@@ -101,52 +105,39 @@ class KanbanService {
     return apiService.deleteComment(id);
   }
 
-  // Real-time events
-  connectToEvents(): void {
-    if (this.eventSource) {
-      this.eventSource.close();
-    }
-
-    this.eventSource = apiService.connectToEvents((event: KanbanEvent) => {
-      this.handleEvent(event);
-    });
+  // Poll methods
+  async createPoll(data: CreatePollRequest): Promise<Poll> {
+    return apiService.createPoll(data);
   }
 
-  disconnectFromEvents(): void {
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
-    }
+  async getPollById(id: string): Promise<Poll> {
+    return apiService.getPollById(id);
   }
 
-  private handleEvent(event: KanbanEvent): void {
-    // Emit event to listeners
-    const listeners = this.eventListeners.get(event.type) || [];
-    listeners.forEach(listener => {
-      try {
-        listener(event);
-      } catch (error) {
-        console.error(`Error in event listener for ${event.type}:`, error);
-      }
-    });
+  async getPollsByCardId(cardId: string): Promise<Poll[]> {
+    return apiService.getPollsByCardId(cardId);
   }
 
-  addEventListener(eventType: string, listener: Function): void {
-    if (!this.eventListeners.has(eventType)) {
-      this.eventListeners.set(eventType, []);
-    }
-    this.eventListeners.get(eventType)!.push(listener);
+  async updatePoll(id: string, data: UpdatePollRequest): Promise<Poll> {
+    return apiService.updatePoll(id, data);
   }
 
-  removeEventListener(eventType: string, listener: Function): void {
-    const listeners = this.eventListeners.get(eventType);
-    if (listeners) {
-      const index = listeners.indexOf(listener);
-      if (index > -1) {
-        listeners.splice(index, 1);
-      }
-    }
+  async deletePoll(id: string): Promise<void> {
+    return apiService.deletePoll(id);
   }
+
+  async votePoll(id: string, data: VotePollRequest): Promise<Poll> {
+    return apiService.votePoll(id, data);
+  }
+
+  async removePollVote(pollId: string, optionId: string): Promise<Poll> {
+    return apiService.removePollVote(pollId, optionId);
+  }
+
+  async getUserVotes(pollId: string): Promise<any[]> {
+    return apiService.getUserVotes(pollId);
+  }
+
 
   // Utility methods
   async getBoard(): Promise<{ columns: Column[]; cards: Card[] }> {

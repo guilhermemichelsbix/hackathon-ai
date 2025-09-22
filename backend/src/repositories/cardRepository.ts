@@ -35,6 +35,36 @@ export class CardRepository {
           },
           orderBy: { createdAt: 'asc' },
         },
+        polls: {
+          include: {
+            options: {
+              orderBy: { position: 'asc' },
+              include: {
+                votes: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            votes: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
         column: true,
       },
     });
@@ -53,6 +83,7 @@ export class CardRepository {
         },
         votes: true,
         comments: true,
+        polls: true,
         column: true,
       },
     });
@@ -90,6 +121,36 @@ export class CardRepository {
             },
           },
           orderBy: { createdAt: 'asc' },
+        },
+        polls: {
+          include: {
+            options: {
+              orderBy: { position: 'asc' },
+              include: {
+                votes: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            votes: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
         },
         column: true,
       },
@@ -160,6 +221,36 @@ export class CardRepository {
             },
           },
           orderBy: { createdAt: 'asc' },
+        },
+        polls: {
+          include: {
+            options: {
+              orderBy: { position: 'asc' },
+              include: {
+                votes: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            votes: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
         },
         column: true,
       },

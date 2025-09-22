@@ -3,6 +3,7 @@ import { CardRepository } from '@/repositories/cardRepository';
 import { CreateColumnRequest, UpdateColumnRequest, ReorderColumnsRequest } from '@/types';
 import { AppError, ValidationError, NotFoundError } from '@/types';
 import { logger } from '@/utils/logger';
+import { getSocketManager } from '@/utils/socketManager';
 
 export class ColumnService {
   private columnRepository: ColumnRepository;
@@ -25,6 +26,12 @@ export class ColumnService {
       });
 
       logger.info(`Column created: ${column.id}`);
+
+      // Broadcast real-time event
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastColumnCreated(column);
+      }
 
       return column;
     } catch (error) {
@@ -72,6 +79,12 @@ export class ColumnService {
 
       logger.info(`Column updated: ${column.id}`);
 
+      // Broadcast real-time event
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastColumnUpdated(column);
+      }
+
       return column;
     } catch (error) {
       logger.error('Update column error:', error);
@@ -97,6 +110,12 @@ export class ColumnService {
       await this.columnRepository.delete(id);
 
       logger.info(`Column deleted: ${id}`);
+
+      // Broadcast real-time event
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastColumnDeleted(id);
+      }
 
       return { success: true };
     } catch (error) {
@@ -126,6 +145,12 @@ export class ColumnService {
       const columns = await this.columnRepository.reorder(data.columns);
 
       logger.info('Columns reordered');
+
+      // Broadcast real-time event
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastColumnsReordered(columns);
+      }
 
       return columns;
     } catch (error) {

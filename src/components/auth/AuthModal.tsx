@@ -308,7 +308,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                           <Input
                             id="register-confirm-password"
                             type={showPassword ? 'text' : 'password'}
-                            placeholder="Confirmar senha"
+                            placeholder={t('auth.confirmPasswordPlaceholder')}
                             value={registerData.confirmPassword}
                             onChange={(e) => setRegisterData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                             className={`pl-10 ${

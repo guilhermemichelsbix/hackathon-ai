@@ -35,14 +35,21 @@ export class VoteController {
 
   removeVote = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      console.log('🗑️ CONTROLLER - removeVote iniciado');
+      console.log('🗑️ Params:', req.params);
+      console.log('🗑️ User:', req.user);
+      
       if (!req.user) {
+        console.log('❌ Usuário não autenticado');
         return res.status(401).json({
           success: false,
           error: 'Usuário não autenticado',
         });
       }
 
+      console.log('🗑️ Chamando voteService.removeVote...');
       const vote = await this.voteService.removeVote(req.params.id, req.user.id);
+      console.log('🗑️ VoteService retornou:', vote);
       
       const response: ApiResponse = {
         success: true,
@@ -50,8 +57,10 @@ export class VoteController {
         message: 'Voto removido com sucesso',
       };
 
+      console.log('🗑️ Enviando resposta:', response);
       res.status(200).json(response);
     } catch (error) {
+      console.error('❌ ERRO no controller removeVote:', error);
       next(error);
     }
   };

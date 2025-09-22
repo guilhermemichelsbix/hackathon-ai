@@ -1,19 +1,33 @@
-import { pollRepository } from '../repositories/pollRepository';
-import { cardRepository } from '../repositories/cardRepository';
-import { sseManager } from '../utils/sseManager';
+import { PollRepository } from '@/repositories/pollRepository';
+import { CardRepository } from '@/repositories/cardRepository';
+import { getSocketManager } from '@/utils/socketManager';
 import { NotFoundError, ForbiddenError, ValidationError } from '../types';
 import type { CreatePollRequest, UpdatePollRequest } from '../types';
 
 export class PollService {
+  private pollRepository: PollRepository;
+  private cardRepository: CardRepository;
+
+  constructor() {
+    this.pollRepository = new PollRepository();
+    this.cardRepository = new CardRepository();
+  }
+
   async createPoll(data: CreatePollRequest, userId: string) {
     // Verify user owns the card
-    const card = await cardRepository.findById(data.cardId);
+    const card = await this.cardRepository.findById(data.cardId);
     if (!card) {
       throw new NotFoundError('Card not found');
     }
 
     if (card.createdBy !== userId) {
       throw new ForbiddenError('Only card creator can add polls');
+    }
+
+    // Check if card already has a poll
+    const existingPolls = await this.pollRepository.findByCardId(data.cardId);
+    if (existingPolls.length > 0) {
+      throw new ValidationError('Card already has a poll. Only one poll per card is allowed.');
     }
 
     // Validate options
@@ -30,7 +44,7 @@ export class PollService {
       throw new ValidationError('Poll question is required');
     }
 
-    const poll = await pollRepository.create({
+    const poll = await this.pollRepository.create({
       ...data,
       createdBy: userId,
     });
@@ -39,16 +53,16 @@ export class PollService {
     const enrichedPoll = this.enrichPollData(poll);
 
     // Broadcast real-time event
-    sseManager.broadcast({
-      type: 'poll.created',
-      payload: enrichedPoll,
-    });
+    const socketManager = getSocketManager();
+    if (socketManager) {
+      socketManager.broadcastPollCreated(enrichedPoll);
+    }
 
     return enrichedPoll;
   }
 
   async getPollById(id: string, userId?: string) {
-    const poll = await pollRepository.findById(id);
+    const poll = await this.pollRepository.findById(id);
     if (!poll) {
       throw new NotFoundError('Poll not found');
     }
@@ -57,12 +71,12 @@ export class PollService {
   }
 
   async getPollsByCardId(cardId: string, userId?: string) {
-    const polls = await pollRepository.findByCardId(cardId);
+    const polls = await this.pollRepository.findByCardId(cardId);
     return polls.map(poll => this.enrichPollData(poll, userId));
   }
 
   async updatePoll(id: string, data: UpdatePollRequest, userId: string) {
-    const existingPoll = await pollRepository.findById(id);
+    const existingPoll = await this.pollRepository.findById(id);
     if (!existingPoll) {
       throw new NotFoundError('Poll not found');
     }
@@ -71,20 +85,20 @@ export class PollService {
       throw new ForbiddenError('Only poll creator can update poll');
     }
 
-    const updatedPoll = await pollRepository.update(id, data);
+    const updatedPoll = await this.pollRepository.update(id, data);
     const enrichedPoll = this.enrichPollData(updatedPoll);
 
     // Broadcast real-time event
-    sseManager.broadcast({
-      type: 'poll.updated',
-      payload: enrichedPoll,
-    });
+    const socketManager = getSocketManager();
+    if (socketManager) {
+      socketManager.broadcastPollUpdated(enrichedPoll);
+    }
 
     return enrichedPoll;
   }
 
   async deletePoll(id: string, userId: string) {
-    const poll = await pollRepository.findById(id);
+    const poll = await this.pollRepository.findById(id);
     if (!poll) {
       throw new NotFoundError('Poll not found');
     }
@@ -93,19 +107,19 @@ export class PollService {
       throw new ForbiddenError('Only poll creator can delete poll');
     }
 
-    await pollRepository.delete(id);
+    await this.pollRepository.delete(id);
 
     // Broadcast real-time event
-    sseManager.broadcast({
-      type: 'poll.deleted',
-      payload: { pollId: id, cardId: poll.cardId },
-    });
+    const socketManager = getSocketManager();
+    if (socketManager) {
+      socketManager.broadcastPollDeleted(id, poll.cardId);
+    }
 
     return { success: true };
   }
 
   async votePoll(pollId: string, optionIds: string[], userId: string) {
-    const poll = await pollRepository.findById(pollId);
+    const poll = await this.pollRepository.findById(pollId);
     if (!poll) {
       throw new NotFoundError('Poll not found');
     }
@@ -130,27 +144,23 @@ export class PollService {
       throw new ValidationError('This poll only allows one choice');
     }
 
-    const votes = await pollRepository.vote(pollId, userId, optionIds);
+    const votes = await this.pollRepository.vote(pollId, userId, optionIds);
 
     // Get updated poll data
-    const updatedPoll = await pollRepository.findById(pollId);
+    const updatedPoll = await this.pollRepository.findById(pollId);
     const enrichedPoll = this.enrichPollData(updatedPoll!);
 
     // Broadcast real-time event
-    sseManager.broadcast({
-      type: 'poll.voted',
-      payload: { 
-        pollId, 
-        cardId: poll.cardId, 
-        votes: poll.isSecret ? [] : votes 
-      },
-    });
+    const socketManager = getSocketManager();
+    if (socketManager) {
+      socketManager.broadcastPollVoted(pollId, optionIds[0], userId);
+    }
 
     return enrichedPoll;
   }
 
   async removeVote(pollId: string, optionId: string, userId: string) {
-    const poll = await pollRepository.findById(pollId);
+    const poll = await this.pollRepository.findById(pollId);
     if (!poll) {
       throw new NotFoundError('Poll not found');
     }
@@ -159,27 +169,23 @@ export class PollService {
       throw new ValidationError('Poll is no longer active');
     }
 
-    await pollRepository.removeVote(pollId, userId, optionId);
+    await this.pollRepository.removeVote(pollId, userId, optionId);
 
     // Get updated poll data
-    const updatedPoll = await pollRepository.findById(pollId);
+    const updatedPoll = await this.pollRepository.findById(pollId);
     const enrichedPoll = this.enrichPollData(updatedPoll!);
 
     // Broadcast real-time event
-    sseManager.broadcast({
-      type: 'poll.voted',
-      payload: { 
-        pollId, 
-        cardId: poll.cardId, 
-        votes: [] 
-      },
-    });
+    const socketManager = getSocketManager();
+    if (socketManager) {
+      socketManager.broadcastPollVoteRemoved(pollId, optionId, userId);
+    }
 
     return enrichedPoll;
   }
 
   async getUserVotes(pollId: string, userId: string) {
-    return await pollRepository.getUserVotes(pollId, userId);
+    return await this.pollRepository.getUserVotes(pollId, userId);
   }
 
   private enrichPollData(poll: any, userId?: string) {

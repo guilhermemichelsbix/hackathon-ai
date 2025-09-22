@@ -116,7 +116,7 @@ export function KanbanColumn({
               <DropdownMenuContent align="end" className="w-48 bg-background/95 backdrop-blur-xl border-border/50 shadow-xl">
                 <DropdownMenuItem onClick={() => onEditColumn?.(column)} className="hover:bg-primary/10 transition-colors duration-200">
                   <Edit className="h-4 w-4 mr-2" />
-                  Editar coluna
+                  {t('column.editColumn')}
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
@@ -126,7 +126,7 @@ export function KanbanColumn({
                   className="hover:bg-secondary/50 transition-colors duration-200"
                 >
                   <ChevronLeft className="h-4 w-4 mr-2" />
-                  Mover para esquerda
+                  {t('column.moveLeft')}
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem 
@@ -134,7 +134,7 @@ export function KanbanColumn({
                   className="hover:bg-secondary/50 transition-colors duration-200"
                 >
                   <ChevronRight className="h-4 w-4 mr-2" />
-                  Mover para direita
+                  {t('column.moveRight')}
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
@@ -144,7 +144,7 @@ export function KanbanColumn({
                   className="text-orange-600 hover:bg-orange-50 transition-colors duration-200"
                 >
                   <EyeOff className="h-4 w-4 mr-2" />
-                  Ocultar coluna
+                  {t('column.hideColumn')}
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem 
@@ -152,7 +152,7 @@ export function KanbanColumn({
                   className="text-destructive hover:bg-destructive/10 transition-colors duration-200"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir coluna
+                  {t('column.deleteColumn')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -203,7 +203,7 @@ export function KanbanColumn({
                       {t('kanban.noCards')}
                     </h4>
                     <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                      Comece criando sua primeira ideia
+                      {t('kanban.noCardsDescription')}
                     </p>
                     <Button
                       onClick={handleAddCard}

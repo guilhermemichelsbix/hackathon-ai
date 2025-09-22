@@ -191,26 +191,42 @@ export function KanbanBoard() {
   const handleCardVote = async (card: Card) => {
     if (!currentUser) return;
 
-    const hasVoted = getUserVoteForCard(card.id, currentUser.id);
+    console.log('🎯 INÍCIO - handleCardVote');
+    console.log('🎯 Card ID:', card.id);
+    console.log('🎯 User ID:', currentUser.id);
+    console.log('🎯 Card votes:', card.votes);
     
+    // Always check with the backend to ensure we have the latest state
     try {
+      console.log('🔍 Verificando hasUserVoted para card:', card.id);
+      const hasVoted = await apiService.hasUserVoted(card.id);
+      console.log('🔍 hasUserVoted result:', hasVoted);
+      
       if (hasVoted) {
-        // Remove vote via API
-        await apiService.removeVote(card.id);
-        // Update local state
-        removeVote(card.id, currentUser.id);
+        // Remove vote via API - Socket.IO will handle the state update
+        console.log('🗑️ REMOVENDO VOTO - Iniciando chamada API');
+        console.log('🗑️ URL será: DELETE /api/cards/' + card.id + '/votes');
+        const result = await apiService.removeVote(card.id);
+        console.log('🗑️ RESULTADO removeVote:', result);
+        console.log('🗑️ Voto removido via API com sucesso');
         toast.success(t('card.unvoteSuccess'));
       } else {
-        // Add vote via API
+        // Add vote via API - Socket.IO will handle the state update
+        console.log('➕ ADICIONANDO VOTO - Iniciando chamada API');
+        console.log('➕ URL será: POST /api/cards/' + card.id + '/votes');
         const newVote = await apiService.addVote(card.id);
-        // Update local state
-        addVote(newVote);
+        console.log('➕ RESULTADO addVote:', newVote);
+        console.log('➕ Voto adicionado via API com sucesso');
         toast.success(t('card.voteSuccess'));
       }
     } catch (error) {
-      console.error('Error voting on card:', error);
+      console.error('❌ ERRO COMPLETO em handleCardVote:', error);
+      console.error('❌ Error message:', error.message);
+      console.error('❌ Error stack:', error.stack);
       toast.error(t('error.generic'));
     }
+    
+    console.log('🎯 FIM - handleCardVote');
   };
 
   const handleAddCard = (columnId: string) => {

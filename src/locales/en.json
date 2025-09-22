@@ -11,19 +11,27 @@
     "add": "Add",
     "create": "Create",
     "update": "Update",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "characters": "characters",
+    "user": "User"
   },
   "auth": {
     "login": "Login",
     "logout": "Logout",
     "email": "Email",
     "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm your password",
     "name": "Name",
+    "namePlaceholder": "Your full name",
     "register": "Register",
     "forgotPassword": "Forgot password?",
     "loginSuccess": "Login successful!",
     "loginError": "Login failed",
-    "logoutSuccess": "Logout successful!"
+    "logoutSuccess": "Logout successful!",
+    "myAccount": "My Account",
+    "profile": "Profile",
+    "settings": "Settings"
   },
   "kanban": {
     "title": "Idea Kanban",
@@ -34,7 +42,14 @@
     "allColumns": "All columns",
     "noCards": "No cards found",
     "noCardsDescription": "How about creating your first idea?",
-    "dragHint": "Drag cards between columns to change status"
+    "dragHint": "Drag cards between columns to change status",
+    "columns": "Columns",
+    "columnVisibility": "Column Visibility",
+    "showAllColumns": "Show all columns",
+    "addColumn": "Column",
+    "cards": "cards",
+    "votes": "votes",
+    "comments": "comments"
   },
   "card": {
     "title": "Title",
@@ -56,7 +71,13 @@
     "updateSuccess": "Card updated successfully!",
     "deleteSuccess": "Card deleted successfully!",
     "voteSuccess": "Vote registered!",
-    "unvoteSuccess": "Vote removed!"
+    "unvoteSuccess": "Vote removed!",
+    "titlePlaceholder": "Enter your idea title...",
+    "descriptionPlaceholder": "Describe your idea in detail...",
+    "titleTooLong": "Title too long",
+    "descriptionTooLong": "Description too long",
+    "editSubtitle": "Update your idea details",
+    "createSubtitle": "Create a new innovative idea"
   },
   "column": {
     "backlog": "Backlog",
@@ -67,8 +88,17 @@
     "addColumn": "Add Column",
     "editColumn": "Edit Column",
     "deleteColumn": "Delete Column",
+    "hideColumn": "Hide Column",
+    "moveLeft": "Move Left",
+    "moveRight": "Move Right",
     "columnName": "Column name",
-    "columnDescription": "Column description"
+    "columnDescription": "Column description",
+    "selectColumn": "Select a column",
+    "columnNamePlaceholder": "Enter column name...",
+    "nameRequired": "Column name is required",
+    "createSuccess": "Column created successfully!",
+    "updateSuccess": "Column updated successfully!",
+    "saveError": "Error saving column"
   },
   "comment": {
     "addComment": "Add comment",
@@ -81,7 +111,36 @@
     "updateSuccess": "Comment updated!",
     "deleteSuccess": "Comment deleted!",
     "noComments": "No comments yet",
-    "beFirst": "Be the first to comment!"
+    "beFirst": "Be the first to comment!",
+    "single": "comment",
+    "plural": "comments"
+  },
+  "poll": {
+    "title": "Poll",
+    "question": "Poll question",
+    "questionPlaceholder": "Enter your question...",
+    "options": "Options",
+    "addOption": "Add option",
+    "optionPlaceholder": "Enter an option...",
+    "multipleChoice": "Multiple choice",
+    "secretVote": "Secret vote",
+    "createPoll": "Create Poll",
+    "editPoll": "Edit Poll",
+    "deletePoll": "Delete Poll",
+    "vote": "Vote",
+    "votes": "votes",
+    "totalVotes": "Total votes",
+    "noVotes": "No votes yet",
+    "beFirst": "Be the first to vote!",
+    "pollCreated": "Poll created successfully!",
+    "pollUpdated": "Poll updated successfully!",
+    "pollDeleted": "Poll deleted successfully!",
+    "voteRegistered": "Vote registered!",
+    "questionRequired": "Question is required",
+    "optionsRequired": "At least 2 options are required",
+    "optionRequired": "Option is required",
+    "noPolls": "No polls created yet",
+    "noPollsYet": "No polls in this idea yet"
   },
   "settings": {
     "language": "Language",

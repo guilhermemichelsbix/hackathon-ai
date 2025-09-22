@@ -185,6 +185,46 @@ class SSEManager {
       timestamp: new Date(),
     });
   }
+
+  broadcastPollCreated(poll: any): void {
+    this.broadcastEvent({
+      type: 'poll.created',
+      payload: poll,
+      timestamp: new Date(),
+    });
+  }
+
+  broadcastPollUpdated(poll: any): void {
+    this.broadcastEvent({
+      type: 'poll.updated',
+      payload: poll,
+      timestamp: new Date(),
+    });
+  }
+
+  broadcastPollDeleted(data: { pollId: string; cardId: string }): void {
+    this.broadcastEvent({
+      type: 'poll.deleted',
+      payload: data,
+      timestamp: new Date(),
+    });
+  }
+
+  broadcastPollVoted(data: { pollId: string; optionId: string; userId: string }): void {
+    this.broadcastEvent({
+      type: 'poll.voted',
+      payload: data,
+      timestamp: new Date(),
+    });
+  }
+
+  broadcastPollVoteRemoved(data: { pollId: string; optionId: string; userId: string }): void {
+    this.broadcastEvent({
+      type: 'poll.vote.removed',
+      payload: data,
+      timestamp: new Date(),
+    });
+  }
 }
 
 // Singleton instance

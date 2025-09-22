@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { useTheme } from '@/hooks/useTheme';
+import { Plus, Edit3 } from 'lucide-react';
 
 import {
   Dialog,
@@ -35,12 +36,12 @@ import {
 
 import type { Card, Column } from '@/types/kanban';
 import { useKanbanStore, useCurrentUser } from '@/store/kanban';
-import { simulateApiDelay } from '@/lib/mock-data';
+import { kanbanService } from '@/services/kanbanService';
 
 const cardFormSchema = z.object({
-  title: z.string().min(1, 'titleRequired').max(100, 'Título muito longo'),
-  description: z.string().min(1, 'descriptionRequired').max(1000, 'Descrição muito longa'),
-  columnId: z.string().min(1, 'Coluna é obrigatória'),
+  title: z.string().min(1, 'card.titleRequired').max(100, 'card.titleTooLong'),
+  description: z.string().min(1, 'card.descriptionRequired').max(1000, 'card.descriptionTooLong'),
+  columnId: z.string().min(1, 'column.selectColumn'),
 });
 
 type CardFormData = z.infer<typeof cardFormSchema>;
@@ -63,7 +64,7 @@ export function CardFormModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const currentUser = useCurrentUser();
-  const { board, addCard, updateCard } = useKanbanStore();
+  const { board, loadBoard } = useKanbanStore();
   
   const isEditing = !!card;
   
@@ -105,40 +106,27 @@ export function CardFormModal({
     setIsSubmitting(true);
     
     try {
-      await simulateApiDelay(500);
-      
       if (isEditing && card) {
         // Update existing card
-        updateCard(card.id, {
+        await kanbanService.updateCard(card.id, {
           title: data.title,
           description: data.description,
-          updatedAt: new Date(),
         });
         
         toast.success(t('card.updateSuccess'));
       } else {
         // Create new card
-        const targetColumn = board.columns.find(col => col.id === data.columnId);
-        const cardsInColumn = board.cards.filter(c => c.columnId === data.columnId);
-        const newPosition = cardsInColumn.length;
-        
-        const newCard: Card = {
-          id: `card-${Date.now()}`,
+        await kanbanService.createCard({
           title: data.title,
           description: data.description,
           columnId: data.columnId,
-          createdBy: currentUser.id,
-          position: newPosition,
-          votes: [],
-          comments: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
+        });
         
-        addCard(newCard);
         toast.success(t('card.createSuccess'));
       }
       
+      // Reload board to get updated data
+      await loadBoard();
       onClose();
     } catch (error) {
       console.error('Error submitting card:', error);
@@ -153,10 +141,24 @@ export function CardFormModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg bg-card border-border/50 shadow-2xl">
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl font-bold text-foreground tracking-tight">
-            {isEditing ? t('card.editCard') : t('kanban.newIdea')}
-          </DialogTitle>
+        <DialogHeader className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              {isEditing ? (
+                <Edit3 className="h-5 w-5 text-primary" />
+              ) : (
+                <Plus className="h-5 w-5 text-primary" />
+              )}
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-bold text-foreground tracking-tight">
+                {isEditing ? t('card.editCard') : t('kanban.newIdea')}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                {isEditing ? t('card.editSubtitle') : t('card.createSubtitle')}
+              </p>
+            </div>
+          </div>
         </DialogHeader>
 
         <Form {...form}>
@@ -170,7 +172,7 @@ export function CardFormModal({
                   <FormLabel>{t('card.title')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Digite o título da sua ideia..."
+                      placeholder={t('card.titlePlaceholder')}
                       {...field}
                       className="bg-background/50 border-border/50 focus:bg-background focus:border-border transition-all duration-200"
                     />
@@ -189,7 +191,7 @@ export function CardFormModal({
                   <FormLabel>{t('card.description')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Descreva sua ideia detalhadamente..."
+                      placeholder={t('card.descriptionPlaceholder')}
                       className="min-h-[120px] resize-none bg-background/50 border-border/50 focus:bg-background focus:border-border transition-all duration-200"
                       {...field}
                     />
@@ -206,14 +208,14 @@ export function CardFormModal({
                 name="columnId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Coluna</FormLabel>
+                    <FormLabel>{t('column.columnName')}</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger className="bg-background/50 border-border/50 focus:bg-background focus:border-border transition-all duration-200">
-                          <SelectValue placeholder="Selecione uma coluna" />
+                          <SelectValue placeholder={t('column.selectColumn')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="bg-popover border-border/50">
@@ -250,18 +252,17 @@ export function CardFormModal({
                 className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"
               >
                 {isSubmitting ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-4 h-4 border-2 border-t-transparent rounded-full mr-2 border-primary-foreground"
-                  />
-                ) : null}
-                {isSubmitting 
-                  ? t('common.loading')
-                  : isEditing 
-                    ? t('common.update')
-                    : t('common.create')
-                }
+                  <div className="flex items-center">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-4 h-4 border-2 border-t-transparent rounded-full mr-2 border-primary-foreground"
+                    />
+                    {t('common.loading')}
+                  </div>
+                ) : (
+                  isEditing ? t('common.update') : t('common.create')
+                )}
               </Button>
             </div>
           </form>

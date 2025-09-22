@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR, enUS } from 'date-fns/locale';
 import { useTheme } from '@/hooks/useTheme';
+import { toast } from 'sonner';
 import {
   Heart,
   MessageCircle,
@@ -59,7 +60,7 @@ export function CardDetailsModal({
   const [editCommentText, setEditCommentText] = useState('');
   
   const currentUser = useCurrentUser();
-  const { getUserVoteForCard, addComment, updateComment, removeComment } = useKanbanStore();
+  const { getUserVoteForCard, createComment, updateCommentData, deleteComment } = useKanbanStore();
 
   if (!card) return null;
 
@@ -80,18 +81,15 @@ export function CardDetailsModal({
   const handleAddComment = async () => {
     if (!newComment.trim() || !currentUser) return;
 
-    const comment: Comment = {
-      id: `comment-${Date.now()}`,
-      cardId: card.id,
-      body: newComment.trim(),
-      createdBy: currentUser.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      user: currentUser,
-    };
-
-    addComment(comment);
-    setNewComment('');
+    try {
+      // Chama a API para criar o comentário - Socket.IO vai atualizar o estado
+      await createComment(card.id, { body: newComment.trim() });
+      setNewComment('');
+      console.log('✅ Comentário criado via API - Socket.IO vai atualizar o estado');
+    } catch (error) {
+      console.error('❌ Erro ao criar comentário:', error);
+      toast.error('Erro ao adicionar comentário');
+    }
   };
 
   const handleEditComment = (comment: Comment) => {
@@ -99,16 +97,19 @@ export function CardDetailsModal({
     setEditCommentText(comment.body);
   };
 
-  const handleSaveEditComment = (commentId: string) => {
+  const handleSaveEditComment = async (commentId: string) => {
     if (!editCommentText.trim()) return;
     
-    updateComment(commentId, {
-      body: editCommentText.trim(),
-      updatedAt: new Date(),
-    });
-    
-    setEditingComment(null);
-    setEditCommentText('');
+    try {
+      // Chama a API para atualizar o comentário - Socket.IO vai atualizar o estado
+      await updateCommentData(commentId, { body: editCommentText.trim() });
+      setEditingComment(null);
+      setEditCommentText('');
+      console.log('✅ Comentário atualizado via API - Socket.IO vai atualizar o estado');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar comentário:', error);
+      toast.error('Erro ao atualizar comentário');
+    }
   };
 
   const handleCancelEditComment = () => {
@@ -116,9 +117,17 @@ export function CardDetailsModal({
     setEditCommentText('');
   };
 
-  const handleDeleteComment = (commentId: string) => {
+  const handleDeleteComment = async (commentId: string) => {
     if (!confirm(t('comment.confirmDeleteComment'))) return;
-    removeComment(commentId);
+    
+    try {
+      // Chama a API para deletar o comentário - Socket.IO vai atualizar o estado
+      await deleteComment(commentId);
+      console.log('✅ Comentário deletado via API - Socket.IO vai atualizar o estado');
+    } catch (error) {
+      console.error('❌ Erro ao deletar comentário:', error);
+      toast.error('Erro ao deletar comentário');
+    }
   };
 
   const sortedComments = [...card.comments].sort(
@@ -169,7 +178,7 @@ export function CardDetailsModal({
         <div className="flex-1 overflow-y-auto space-y-8 px-6 pb-6">
           {/* Description */}
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-foreground">Descrição</h4>
+            <h4 className="text-sm font-semibold text-foreground">{t('card.description')}</h4>
             <p className="text-muted-foreground leading-relaxed text-sm">
               {card.description}
             </p>

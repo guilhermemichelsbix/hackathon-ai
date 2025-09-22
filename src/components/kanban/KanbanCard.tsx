@@ -27,16 +27,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import type { Card as KanbanCard } from '@/types/kanban';
+import type { Card as CardType } from '@/types/kanban';
 import { useKanbanStore, useCurrentUser } from '@/store/kanban';
 
 interface KanbanCardProps {
-  card: KanbanCard;
+  card: CardType;
   isDragging?: boolean;
-  onEdit?: (card: KanbanCard) => void;
-  onDelete?: (card: KanbanCard) => void;
-  onVote?: (card: KanbanCard) => void;
-  onClick?: (card: KanbanCard) => void;
+  onEdit?: (card: CardType) => void;
+  onDelete?: (card: CardType) => void;
+  onVote?: (card: CardType) => void;
+  onClick?: (card: CardType) => void;
 }
 
 export const KanbanCard = forwardRef<HTMLDivElement, KanbanCardProps>(({ 
@@ -138,7 +138,7 @@ export const KanbanCard = forwardRef<HTMLDivElement, KanbanCardProps>(({
     >
       <Card 
         onClick={handleCardClick}
-        className="p-5 hover:shadow-xl transition-all duration-300 border border-border/30 hover:border-border/60 bg-background/80 backdrop-blur-sm hover:bg-background/95 group cursor-pointer rounded-xl shadow-sm hover:shadow-lg"
+        className="p-5 transition-all duration-300 border border-border/30 hover:border-border/60 bg-background/80 backdrop-blur-sm hover:bg-background/95 group cursor-pointer rounded-xl shadow-sm hover:shadow-lg"
       >
         {/* Header with actions */}
         <div className="flex items-start justify-between mb-4">

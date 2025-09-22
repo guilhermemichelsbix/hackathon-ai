@@ -3,7 +3,7 @@ import { CardRepository } from '@/repositories/cardRepository';
 import { CreateCommentRequest, UpdateCommentRequest } from '@/types';
 import { AppError, ValidationError, NotFoundError, ForbiddenError } from '@/types';
 import { logger } from '@/utils/logger';
-import { sseManager } from '@/utils/sseManager';
+import { getSocketManager } from '@/utils/socketManager';
 
 export class CommentService {
   private commentRepository: CommentRepository;
@@ -32,7 +32,10 @@ export class CommentService {
       logger.info(`Comment created: ${comment.id} for card: ${cardId} by user: ${userId}`);
 
       // Broadcast real-time event
-      sseManager.broadcastCommentAdded(comment);
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastCommentCreated(comment);
+      }
 
       return comment;
     } catch (error) {
@@ -77,7 +80,10 @@ export class CommentService {
       logger.info(`Comment updated: ${comment.id} by user: ${userId}`);
 
       // Broadcast real-time event
-      sseManager.broadcastCommentUpdated(comment);
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastCommentUpdated(comment);
+      }
 
       return comment;
     } catch (error) {
@@ -105,7 +111,10 @@ export class CommentService {
       logger.info(`Comment deleted: ${id} by user: ${userId}`);
 
       // Broadcast real-time event
-      sseManager.broadcastCommentDeleted({ commentId: id, cardId: existingComment.cardId });
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastCommentDeleted(id);
+      }
 
       return { success: true };
     } catch (error) {

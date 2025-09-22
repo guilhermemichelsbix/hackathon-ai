@@ -9,8 +9,8 @@ export class PollRepository {
       data: {
         ...pollData,
         options: {
-          create: options.map((text, index) => ({
-            text,
+          create: options.map((option, index) => ({
+            text: typeof option === 'string' ? option : option.text,
             position: index,
           })),
         },

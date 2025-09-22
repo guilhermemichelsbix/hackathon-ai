@@ -37,6 +37,36 @@ export class ColumnRepository {
               },
               orderBy: { createdAt: 'asc' },
             },
+            polls: {
+              include: {
+                options: {
+                  orderBy: { position: 'asc' },
+                  include: {
+                    votes: {
+                      include: {
+                        user: {
+                          select: {
+                            id: true,
+                            name: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                votes: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+            },
           },
         },
       },
@@ -78,6 +108,36 @@ export class ColumnRepository {
               },
               orderBy: { createdAt: 'asc' },
             },
+            polls: {
+              include: {
+                options: {
+                  orderBy: { position: 'asc' },
+                  include: {
+                    votes: {
+                      include: {
+                        user: {
+                          select: {
+                            id: true,
+                            name: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                votes: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+            },
           },
         },
       },
@@ -118,6 +178,36 @@ export class ColumnRepository {
                 },
               },
               orderBy: { createdAt: 'asc' },
+            },
+            polls: {
+              include: {
+                options: {
+                  orderBy: { position: 'asc' },
+                  include: {
+                    votes: {
+                      include: {
+                        user: {
+                          select: {
+                            id: true,
+                            name: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                votes: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
             },
           },
         },

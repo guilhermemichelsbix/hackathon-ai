@@ -4,11 +4,15 @@ import type {
   Column, 
   Comment, 
   Vote,
+  Poll,
   CreateCardRequest,
   UpdateCardRequest,
   MoveCardRequest,
   CreateCommentRequest,
   UpdateCommentRequest,
+  CreatePollRequest,
+  UpdatePollRequest,
+  VotePollRequest,
   CardFilters,
   AuthResponse,
   LoginRequest,
@@ -258,25 +262,57 @@ class ApiService {
     await this.request(`/comments/${id}`, { method: 'DELETE' });
   }
 
-  // Real-time events
-  connectToEvents(onMessage: (event: any) => void): EventSource {
-    const eventSource = new EventSource(`${this.baseURL}/events`);
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        onMessage(data);
-      } catch (error) {
-        console.error('Error parsing SSE message:', error);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error);
-    };
-
-    return eventSource;
+  // Poll endpoints
+  async createPoll(data: CreatePollRequest): Promise<Poll> {
+    const response = await this.request<{ success: boolean; data: Poll }>('/polls', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data;
   }
+
+  async getPollById(id: string): Promise<Poll> {
+    const response = await this.request<{ success: boolean; data: Poll }>(`/polls/${id}`);
+    return response.data;
+  }
+
+  async getPollsByCardId(cardId: string): Promise<Poll[]> {
+    const response = await this.request<{ success: boolean; data: Poll[] }>(`/polls/card/${cardId}`);
+    return response.data;
+  }
+
+  async updatePoll(id: string, data: UpdatePollRequest): Promise<Poll> {
+    const response = await this.request<{ success: boolean; data: Poll }>(`/polls/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  }
+
+  async deletePoll(id: string): Promise<void> {
+    await this.request(`/polls/${id}`, { method: 'DELETE' });
+  }
+
+  async votePoll(id: string, data: VotePollRequest): Promise<Poll> {
+    const response = await this.request<{ success: boolean; data: Poll }>(`/polls/${id}/vote`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  }
+
+  async removePollVote(pollId: string, optionId: string): Promise<Poll> {
+    const response = await this.request<{ success: boolean; data: Poll }>(`/polls/${pollId}/vote/${optionId}`, {
+      method: 'DELETE',
+    });
+    return response.data;
+  }
+
+  async getUserVotes(pollId: string): Promise<any[]> {
+    const response = await this.request<{ success: boolean; data: any[] }>(`/polls/${pollId}/votes`);
+    return response.data;
+  }
+
 }
 
 export const apiService = new ApiService();

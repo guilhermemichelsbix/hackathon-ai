@@ -3,7 +3,7 @@ import { CardRepository } from '@/repositories/cardRepository';
 import { Vote } from '@prisma/client';
 import { AppError, ValidationError, NotFoundError } from '@/types';
 import { logger } from '@/utils/logger';
-import { sseManager } from '@/utils/sseManager';
+import { getSocketManager } from '@/utils/socketManager';
 
 export class VoteService {
   private voteRepository: VoteRepository;
@@ -37,7 +37,10 @@ export class VoteService {
       logger.info(`Vote added: ${vote.id} for card: ${cardId} by user: ${userId}`);
 
       // Broadcast real-time event
-      sseManager.broadcastVoteAdded(vote);
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastCardVoted(cardId, userId);
+      }
 
       return vote;
     } catch (error) {
@@ -48,28 +51,52 @@ export class VoteService {
 
   async removeVote(cardId: string, userId: string): Promise<Vote> {
     try {
+      console.log('🗑️ BACKEND - removeVote iniciado');
+      console.log('🗑️ CardId:', cardId);
+      console.log('🗑️ UserId:', userId);
+      
       // Verify card exists
+      console.log('🔍 Verificando se card existe...');
       const card = await this.cardRepository.findById(cardId);
+      console.log('🔍 Card encontrado:', !!card);
       if (!card) {
+        console.log('❌ Card não encontrado');
         throw new NotFoundError('Card');
       }
 
       // Check if vote exists
+      console.log('🔍 Verificando se voto existe...');
       const existingVote = await this.voteRepository.findByCardAndUser(cardId, userId);
+      console.log('🔍 Voto existente:', !!existingVote);
+      if (existingVote) {
+        console.log('🔍 Voto encontrado:', existingVote.id);
+      }
       if (!existingVote) {
+        console.log('❌ Voto não encontrado - usuário não votou neste card');
         throw new ValidationError('Você não votou neste card');
       }
 
       // Remove vote
+      console.log('🗑️ Removendo voto do banco...');
       const vote = await this.voteRepository.delete(cardId, userId);
+      console.log('🗑️ Voto removido com sucesso:', vote.id);
 
       logger.info(`Vote removed: ${vote.id} for card: ${cardId} by user: ${userId}`);
 
       // Broadcast real-time event
-      sseManager.broadcastVoteRemoved({ cardId, userId });
+      console.log('📡 Enviando broadcast via Socket.IO...');
+      const socketManager = getSocketManager();
+      if (socketManager) {
+        socketManager.broadcastCardVoteRemoved(cardId, userId);
+        console.log('📡 Broadcast enviado com sucesso');
+      } else {
+        console.log('⚠️ SocketManager não disponível');
+      }
 
+      console.log('✅ removeVote concluído com sucesso');
       return vote;
     } catch (error) {
+      console.error('❌ ERRO em removeVote:', error);
       logger.error('Remove vote error:', error);
       throw error;
     }
@@ -116,9 +143,21 @@ export class VoteService {
 
   async hasUserVoted(cardId: string, userId: string): Promise<boolean> {
     try {
+      console.log('🔍 BACKEND - hasUserVoted iniciado');
+      console.log('🔍 CardId:', cardId);
+      console.log('🔍 UserId:', userId);
+      
       const vote = await this.voteRepository.findByCardAndUser(cardId, userId);
-      return !!vote;
+      console.log('🔍 Voto encontrado:', !!vote);
+      if (vote) {
+        console.log('🔍 Voto ID:', vote.id);
+      }
+      
+      const result = !!vote;
+      console.log('🔍 hasUserVoted result:', result);
+      return result;
     } catch (error) {
+      console.error('❌ ERRO em hasUserVoted:', error);
       logger.error('Check user vote error:', error);
       throw error;
     }

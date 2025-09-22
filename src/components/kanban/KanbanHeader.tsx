@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/hooks/useTheme';
+import { useSocket } from '@/hooks/useSocket';
 import { 
   Search, 
   Filter, 
@@ -17,7 +18,9 @@ import {
   EyeOff,
   BarChart3,
   MessageSquare,
-  Heart
+  Heart,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,19 +34,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AuthModal } from '@/components/auth/AuthModal';
 import { useKanbanStore } from '@/store/kanban';
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
+import { CardFormModal } from './CardFormModal';
+import { ColumnFormModal } from './ColumnFormModal';
 
-interface KanbanHeaderProps {
-  onAddCard?: (columnId?: string) => void;
-  onCreateColumn?: () => void;
-}
-
-export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
+export function KanbanHeader() {
   const { t, i18n } = useTranslation();
   const { theme, toggleTheme } = useTheme();
+  const { isConnected } = useSocket();
   const { 
     searchQuery, 
     setSearchQuery, 
@@ -55,12 +55,15 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
     user,
     setUser,
     loadBoard,
-    connectToRealtime,
     toggleColumnVisibility,
     resetColumnVisibility
   } = useKanbanStore();
+
+  // Modal states
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
+  const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
+  const [editingColumn, setEditingColumn] = useState(null);
   
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -78,12 +81,26 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
     localStorage.setItem('i18nextLng', locale);
   };
 
-
-  const handleAuthSuccess = async () => {
-    // Load board data and connect to real-time after successful auth
-    await loadBoard();
-    connectToRealtime();
+  // Modal handlers
+  const handleAddCard = () => {
+    setIsCardModalOpen(true);
   };
+
+  const handleCreateColumn = () => {
+    setEditingColumn(null);
+    setIsColumnModalOpen(true);
+  };
+
+  const handleCloseCardModal = () => {
+    setIsCardModalOpen(false);
+  };
+
+  const handleCloseColumnModal = () => {
+    setIsColumnModalOpen(false);
+    setEditingColumn(null);
+  };
+
+
 
   const totalCards = board.cards.length;
   const totalVotes = board.cards.reduce((sum, card) => sum + card.votes.length, 0);
@@ -110,6 +127,24 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
                 <span className="font-bold text-sm">K</span>
               </div>
               <h1 className="text-xl font-bold text-foreground tracking-tight">{t('kanban.title')}</h1>
+              
+              {/* Socket.IO Connection Status */}
+              <Badge 
+                variant={isConnected ? "default" : "destructive"}
+                className="flex items-center gap-1.5 px-2 py-1 text-xs"
+              >
+                {isConnected ? (
+                  <>
+                    <Wifi className="h-3 w-3" />
+                    Conectado
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-3 w-3" />
+                    Desconectado
+                  </>
+                )}
+              </Badge>
             </motion.div>
 
             {/* Right Side Options */}
@@ -136,7 +171,7 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
                 </SelectContent>
               </Select>
 
-              {user ? (
+              {user && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="flex items-center space-x-2 h-9 px-3 hover:bg-secondary/50 transition-all duration-200">
@@ -147,15 +182,15 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48 bg-popover border-border/50 shadow-lg">
-                    <DropdownMenuLabel className="text-foreground font-semibold text-sm">Minha Conta</DropdownMenuLabel>
+                    <DropdownMenuLabel className="text-foreground font-semibold text-sm">{t('auth.myAccount')}</DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-border/50" />
                     <DropdownMenuItem className="hover:bg-secondary/50 transition-colors duration-200">
                       <User className="mr-2 h-4 w-4" />
-                      <span>Perfil</span>
+                      <span>{t('auth.profile')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem className="hover:bg-secondary/50 transition-colors duration-200">
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>Configurações</span>
+                      <span>{t('auth.settings')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-border/50" />
                     <DropdownMenuItem onClick={handleLogout} className="text-destructive hover:bg-destructive/10 transition-colors duration-200">
@@ -164,15 +199,6 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : (
-                <Button 
-                  onClick={() => setIsAuthModalOpen(true)} 
-                  size="sm" 
-                  className="h-9 px-3 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  {t('auth.login')}
-                </Button>
               )}
             </div>
           </div>
@@ -224,13 +250,13 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
                     className="h-9 px-3 bg-background/50 border-border/50 hover:bg-background hover:border-border transition-all duration-200"
                   >
                     <Eye className="h-4 w-4 mr-2" />
-                    Colunas
+                    {t('kanban.columns')}
                     <ChevronDown className="h-3 w-3 ml-2" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64 bg-popover border-border/50">
                   <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
-                    Visibilidade das Colunas
+                    {t('kanban.columnVisibility')}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {columnOrder.map((columnId) => {
@@ -260,7 +286,7 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
                     onClick={resetColumnVisibility}
                     className="text-xs text-muted-foreground cursor-pointer"
                   >
-                    Mostrar todas as colunas
+                    {t('kanban.showAllColumns')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -270,15 +296,15 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
             <div className="hidden md:flex items-center space-x-3">
               <Badge variant="secondary" className="flex items-center space-x-2 px-3 py-1 bg-secondary/50 text-secondary-foreground border-border/50 text-xs">
                 <span className="font-semibold">{totalCards}</span>
-                <span className="opacity-75">cards</span>
+                <span className="opacity-75">{t('kanban.cards')}</span>
               </Badge>
               <Badge variant="secondary" className="flex items-center space-x-2 px-3 py-1 bg-secondary/50 text-secondary-foreground border-border/50 text-xs">
                 <span className="font-semibold">{totalVotes}</span>
-                <span className="opacity-75">votos</span>
+                <span className="opacity-75">{t('kanban.votes')}</span>
               </Badge>
               <Badge variant="secondary" className="flex items-center space-x-2 px-3 py-1 bg-secondary/50 text-secondary-foreground border-border/50 text-xs">
                 <span className="font-semibold">{totalComments}</span>
-                <span className="opacity-75">comentários</span>
+                <span className="opacity-75">{t('kanban.comments')}</span>
               </Badge>
             </div>
 
@@ -286,17 +312,17 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
             {user && (
               <div className="flex items-center space-x-2">
                 <Button 
-                  onClick={() => onCreateColumn?.()} 
+                  onClick={handleCreateColumn} 
                   variant="outline" 
                   size="sm" 
                   className="h-9 px-3 border-border/50 hover:bg-secondary/50 transition-all duration-200"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Coluna
+                  {t('kanban.addColumn')}
                 </Button>
                 
                 <Button 
-                  onClick={() => onAddCard?.()} 
+                  onClick={handleAddCard} 
                   size="sm" 
                   className="h-9 px-3 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-sm"
                 >
@@ -309,10 +335,16 @@ export function KanbanHeader({ onAddCard, onCreateColumn }: KanbanHeaderProps) {
         </div>
       </motion.div>
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onSuccess={handleAuthSuccess}
+      {/* Modals */}
+      <CardFormModal
+        isOpen={isCardModalOpen}
+        onClose={handleCloseCardModal}
+      />
+
+      <ColumnFormModal
+        column={editingColumn}
+        isOpen={isColumnModalOpen}
+        onClose={handleCloseColumnModal}
       />
     </>
   );

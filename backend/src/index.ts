@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
+import { createServer } from 'http';
 
 // Load environment variables
 dotenv.config();
@@ -17,7 +18,7 @@ import cardRoutes from '@/routes/cardRoutes';
 import columnRoutes from '@/routes/columnRoutes';
 import voteRoutes from '@/routes/voteRoutes';
 import commentRoutes from '@/routes/commentRoutes';
-import sseRoutes from '@/routes/sseRoutes';
+import { pollRoutes } from '@/routes/pollRoutes';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from '@/middleware/errorHandler';
@@ -26,9 +27,14 @@ import { corsOptions } from '@/middleware/cors';
 // Import utilities
 import { logger } from '@/utils/logger';
 import { prisma } from '@/utils/database';
+import { initializeSocketManager } from '@/utils/socketManager';
 
 const app = express();
+const server = createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// Initialize Socket.IO
+const socketManager = initializeSocketManager(server);
 
 // Swagger configuration
 const swaggerOptions = {
@@ -125,7 +131,7 @@ app.use('/api/cards', cardRoutes);
 app.use('/api/columns', columnRoutes);
 app.use('/api/cards', voteRoutes); // Votes are nested under cards
 app.use('/api/cards', commentRoutes); // Comments are nested under cards
-app.use('/api/events', sseRoutes);
+app.use('/api/polls', pollRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -161,8 +167,9 @@ process.on('SIGINT', async () => {
 });
 
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   logger.info(`🚀 Servidor rodando na porta ${PORT}`);
+  logger.info(`🔌 Socket.IO inicializado`);
   logger.info(`📚 Documentação disponível em http://localhost:${PORT}/docs`);
   logger.info(`🌐 API disponível em http://localhost:${PORT}/api`);
   logger.info(`💚 Health check em http://localhost:${PORT}/health`);
