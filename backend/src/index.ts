@@ -19,6 +19,7 @@ import columnRoutes from '@/routes/columnRoutes';
 import voteRoutes from '@/routes/voteRoutes';
 import commentRoutes from '@/routes/commentRoutes';
 import { pollRoutes } from '@/routes/pollRoutes';
+import userRoutes from '@/routes/userRoutes';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from '@/middleware/errorHandler';
@@ -130,8 +131,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api/columns', columnRoutes);
 app.use('/api/cards', voteRoutes); // Votes are nested under cards
-app.use('/api/cards', commentRoutes); // Comments are nested under cards
+// Comments routes include both nested (/cards/:id/comments) and top-level (/comments/:id)
+app.use('/api/cards', commentRoutes); // For /cards/:id/comments routes
+app.use('/api', commentRoutes); // For /comments/:id routes
 app.use('/api/polls', pollRoutes);
+app.use('/api/users', userRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -144,6 +148,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       cards: '/api/cards',
       columns: '/api/columns',
+      users: '/api/users',
       events: '/api/events',
     },
   });

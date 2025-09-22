@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
@@ -28,6 +29,7 @@ import type { Card, Column } from '@/types/kanban';
 
 export function KanbanBoard() {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const [draggedCard, setDraggedCard] = useState<Card | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [editingCard, setEditingCard] = useState<Card | null>(null);
@@ -43,6 +45,8 @@ export function KanbanBoard() {
     isLoading,
     searchQuery,
     selectedColumnId,
+    // include selectedCreators to trigger filtered view even when no column/search
+    selectedCreators,
     visibleColumns,
     columnOrder,
     getCardsByColumn,
@@ -77,12 +81,14 @@ export function KanbanBoard() {
 
   // Filter cards based on search and column filter
   const getVisibleCardsForColumn = useCallback((columnId: string) => {
-    if (searchQuery || selectedColumnId) {
+    // Consider any active filter: search, column, or selected creators
+    const hasCreatorFilter = Array.isArray(selectedCreators) && selectedCreators.length > 0;
+    if (searchQuery || selectedColumnId || hasCreatorFilter) {
       const filteredCards = getFilteredCards();
       return filteredCards.filter(card => card.columnId === columnId);
     }
     return getCardsByColumn(columnId);
-  }, [searchQuery, selectedColumnId, getCardsByColumn, getFilteredCards]);
+  }, [searchQuery, selectedColumnId, selectedCreators, getCardsByColumn, getFilteredCards]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -154,14 +160,14 @@ export function KanbanBoard() {
       // Then call API in background (don't block UI)
       moveCardData(cardId, targetColumnId, newPosition).catch((error) => {
         console.error('Error moving card:', error);
-        toast.error('Erro ao mover card');
+        toast.error(t('card.moveError'));
         // Could implement rollback here if needed
       });
       
       toast.success(t('card.updateSuccess'));
     } catch (error) {
       console.error('Error moving card:', error);
-      toast.error('Erro ao mover card');
+      toast.error(t('card.moveError'));
     }
   };
 
@@ -174,11 +180,19 @@ export function KanbanBoard() {
   };
 
   const handleCardDelete = async (card: Card) => {
-    if (!confirm(t('card.confirmDelete'))) return;
+    const confirmed = await confirm({
+      title: t('confirm.deleteCardTitle'),
+      description: t('confirm.deleteCardDescription'),
+      confirmText: t('confirm.confirm'),
+      cancelText: t('confirm.cancel'),
+      variant: 'destructive'
+    });
+
+    if (!confirmed) return;
 
     try {
       setLoading(true);
-      // TODO: Implement delete card API call
+      await useKanbanStore.getState().deleteCard(card.id);
       toast.success(t('card.deleteSuccess'));
     } catch (error) {
       console.error('Error deleting card:', error);

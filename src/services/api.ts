@@ -313,6 +313,14 @@ class ApiService {
     return response.data;
   }
 
+  // User endpoints
+  async getUsers(search?: string): Promise<Array<{ id: string; name: string; email: string }>> {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    const response = await this.request<{ success: boolean; data: Array<{ id: string; name: string; email: string }> }>(`/users?${params.toString()}`);
+    return response.data;
+  }
+
 }
 
 export const apiService = new ApiService();

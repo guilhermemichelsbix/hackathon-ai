@@ -101,6 +101,7 @@ export interface KanbanState {
   isLoading: boolean;
   searchQuery: string;
   selectedColumnId: string | null;
+  selectedCreators: string[];
   selectedCard: Card | null;
   draggedCard: DraggedCard | null;
   user: User | null;

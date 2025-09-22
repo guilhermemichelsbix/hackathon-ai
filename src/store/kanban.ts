@@ -14,6 +14,7 @@ interface KanbanActions {
   // Search and filter actions
   setSearchQuery: (query: string) => void;
   setSelectedColumnId: (columnId: string | null) => void;
+  setSelectedCreators: (userIds: string[]) => void;
   
   // Card actions
   addCard: (card: Card) => void;
@@ -91,6 +92,7 @@ const initialState: KanbanState = {
   isLoading: false,
   searchQuery: '',
   selectedColumnId: null,
+  selectedCreators: [],
   selectedCard: null,
   draggedCard: null,
   user: null,
@@ -166,6 +168,12 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
       setSelectedColumnId: (columnId) =>
         set((state) => {
           state.selectedColumnId = columnId;
+        }),
+
+      setSelectedCreators: (userIds) =>
+        set((state) => {
+          // store just the ids
+          state.selectedCreators = userIds;
         }),
       
       // Card actions
@@ -732,11 +740,13 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
           const poll = await kanbanService.updatePoll(pollId, updates);
           set((state) => {
             for (const card of state.board.cards) {
-              const pollIndex = card.polls.findIndex((p) => p.id === pollId);
-              if (pollIndex !== -1) {
-                card.polls[pollIndex] = poll;
-                console.log('✅ Poll updated:', pollId);
-                break;
+              if (card.polls && Array.isArray(card.polls)) {
+                const pollIndex = card.polls.findIndex((p) => p.id === pollId);
+                if (pollIndex !== -1) {
+                  card.polls[pollIndex] = poll;
+                  console.log('✅ Poll updated:', pollId);
+                  break;
+                }
               }
             }
           });
@@ -752,11 +762,13 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
           await kanbanService.deletePoll(pollId);
           set((state) => {
             for (const card of state.board.cards) {
-              const initialLength = card.polls.length;
-              card.polls = card.polls.filter((p) => p.id !== pollId);
-              if (initialLength !== card.polls.length) {
-                console.log('✅ Poll deleted:', pollId);
-                break;
+              if (card.polls && Array.isArray(card.polls)) {
+                const initialLength = card.polls.length;
+                card.polls = card.polls.filter((p) => p.id !== pollId);
+                if (initialLength !== card.polls.length) {
+                  console.log('✅ Poll deleted:', pollId);
+                  break;
+                }
               }
             }
           });
@@ -783,6 +795,11 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
         set((state) => {
           const cardIndex = state.board.cards.findIndex((c) => c.id === poll.cardId);
           if (cardIndex !== -1) {
+            // Ensure polls array exists
+            if (!state.board.cards[cardIndex].polls) {
+              state.board.cards[cardIndex].polls = [];
+            }
+            
             // Check if poll already exists to avoid duplicates
             const existingPollIndex = state.board.cards[cardIndex].polls.findIndex(p => p.id === poll.id);
             if (existingPollIndex === -1) {
@@ -800,11 +817,13 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
       updatePollData: (pollId, updates) =>
         set((state) => {
           for (const card of state.board.cards) {
-            const pollIndex = card.polls.findIndex((p) => p.id === pollId);
-            if (pollIndex !== -1) {
-              Object.assign(card.polls[pollIndex], updates);
-              console.log('✅ Poll updated in real-time:', pollId);
-              break;
+            if (card.polls && Array.isArray(card.polls)) {
+              const pollIndex = card.polls.findIndex((p) => p.id === pollId);
+              if (pollIndex !== -1) {
+                Object.assign(card.polls[pollIndex], updates);
+                console.log('✅ Poll updated in real-time:', pollId);
+                break;
+              }
             }
           }
         }),
@@ -812,11 +831,13 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
       removePoll: (pollId) =>
         set((state) => {
           for (const card of state.board.cards) {
-            const initialLength = card.polls.length;
-            card.polls = card.polls.filter((p) => p.id !== pollId);
-            if (initialLength !== card.polls.length) {
-              console.log('✅ Poll removed in real-time:', pollId);
-              break;
+            if (card.polls && Array.isArray(card.polls)) {
+              const initialLength = card.polls.length;
+              card.polls = card.polls.filter((p) => p.id !== pollId);
+              if (initialLength !== card.polls.length) {
+                console.log('✅ Poll removed in real-time:', pollId);
+                break;
+              }
             }
           }
         }),
@@ -834,8 +855,10 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
         const state = get();
         let cards = state.board.cards;
         
-        // Filter by visible columns first
-        cards = cards.filter((card) => state.visibleColumns.includes(card.columnId));
+        // Filter by visible columns first (if there are any visible restrictions)
+        if (state.visibleColumns && state.visibleColumns.length > 0) {
+          cards = cards.filter((card) => state.visibleColumns.includes(card.columnId));
+        }
         
         // Filter by search query
         if (state.searchQuery) {
@@ -843,13 +866,20 @@ export const useKanbanStore = create<KanbanState & KanbanActions>()(
           cards = cards.filter(
             (card) =>
               card.title.toLowerCase().includes(query) ||
-              card.description.toLowerCase().includes(query)
+              card.description.toLowerCase().includes(query) ||
+              card.creator?.name?.toLowerCase().includes(query)
           );
         }
         
         // Filter by column
         if (state.selectedColumnId) {
           cards = cards.filter((card) => card.columnId === state.selectedColumnId);
+        }
+
+        // Filter by selected creators (multi)
+        if ((state as any).selectedCreators && (state as any).selectedCreators.length > 0) {
+          const setIds = new Set((state as any).selectedCreators as string[]);
+          cards = cards.filter(card => setIds.has(card.createdBy));
         }
         
         return [...cards].sort((a, b) => a.position - b.position);

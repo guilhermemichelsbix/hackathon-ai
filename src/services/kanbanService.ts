@@ -118,6 +118,11 @@ class KanbanService {
     return apiService.getPollsByCardId(cardId);
   }
 
+  // Users
+  async getUsers(search?: string) {
+    return apiService.getUsers(search);
+  }
+
   async updatePoll(id: string, data: UpdatePollRequest): Promise<Poll> {
     return apiService.updatePoll(id, data);
   }

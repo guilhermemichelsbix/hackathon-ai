@@ -85,7 +85,18 @@ export class PollService {
       throw new ForbiddenError('Only poll creator can update poll');
     }
 
-    const updatedPoll = await this.pollRepository.update(id, data);
+    // Extract only the fields that should be updated in the poll table
+    const { question, allowMultiple, isSecret, isActive, endsAt } = data;
+    const pollUpdateData = {
+      question,
+      allowMultiple,
+      isSecret,
+      isActive,
+      endsAt,
+      updatedAt: new Date(),
+    };
+
+    const updatedPoll = await this.pollRepository.update(id, pollUpdateData);
     const enrichedPoll = this.enrichPollData(updatedPoll);
 
     // Broadcast real-time event

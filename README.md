@@ -11,15 +11,17 @@ Uma plataforma visual moderna para gestão de pipeline de inovação empresarial
 ## ✨ Características
 
 ### 🎯 Funcionalidades Principais
-- **📋 Gestão de Cards**: Criar, editar, mover e excluir ideias
-- **🏗️ Colunas Customizáveis**: Organize ideias em estágios personalizáveis
-- **🗳️ Sistema de Votos**: Usuários podem votar nas melhores ideias
-- **💬 Comentários**: Discussões colaborativas em cada ideia
-- **🔍 Busca Avançada**: Encontre ideias por título, descrição ou criador
-- **📱 Responsivo**: Funciona perfeitamente em desktop, tablet e mobile
+- **📋 Gestão de Cards**: Criar, editar (apenas dono), mover (todos) e excluir (apenas dono)
+- **🏗️ Colunas Customizáveis**: Criar/editar/excluir colunas e reordená-las
+- **🗳️ Votos em Cards (like)**: Adicionar/remover voto com atualização em tempo real
+- **📊 Enquetes por Card**: Criar/editar/excluir enquetes (apenas dono do card) e votar em tempo real
+- **💬 Comentários**: Adicionar/editar/excluir comentários (apenas dono do comentário)
+- **🔍 Busca e Filtros**: Busca por título/descrição/criador + filtro por múltiplos autores (multi-select) + filtro por coluna
+- **🎛️ Filtros Ativos**: Chips de filtros abaixo da barra; limpar individualmente ou todos de uma vez
+- **📱 Responsivo**: Layout fluido com chips compactos (limite de exibição com “+N ...”)
 
 ### ⚡ Tecnologias de Tempo Real
-- **🔄 Server-Sent Events (SSE)**: Atualizações instantâneas
+- **📡 Socket.IO**: Eventos em tempo real para cards, colunas, votos, enquetes e comentários
 - **🎭 Drag & Drop**: Interface intuitiva com animações suaves
 - **🌐 Multilíngue**: Suporte completo para PT-BR e EN
 
@@ -28,6 +30,7 @@ Uma plataforma visual moderna para gestão de pipeline de inovação empresarial
 - **✅ Validação Zod**: Validação robusta de dados
 - **🚦 Rate Limiting**: Proteção contra spam
 - **🔒 CORS**: Configuração segura de origem cruzada
+- **🔏 Menor Privilégio (RBAC por ownership)**: O backend valida o “dono” antes de permitir edições/remoções
 
 ## 🏗️ Arquitetura
 
@@ -61,6 +64,12 @@ src/
 ├── lib/                 # Utilitários e configurações
 └── locales/             # Arquivos de internacionalização
 ```
+
+#### Camadas (desacoplamento UI/negócio)
+- Renderização (React): `components/kanban/*`
+- Estado e orquestração: `store/kanban.ts`
+- Serviços HTTP: `services/api.ts` (baixo nível), `services/kanbanService.ts` (alto nível)
+- Tempo real: `services/socketService.ts` (cliente), `hooks/useSocket.ts` (assina eventos)
 
 ## 🚀 Instalação e Configuração
 
@@ -120,6 +129,18 @@ npm run dev
 - **Backend API**: http://localhost:3001/api
 - **Documentação API**: http://localhost:3001/docs
 
+## 🧭 Guia de Uso Rápido
+
+1) Faça login com uma das credenciais de teste
+2) Crie ideias (cards) e mova entre colunas (todos usuários podem mover)
+3) Abra um card (sheet) para comentar, votar e criar enquetes
+4) Use a barra de busca e:
+   - Filtro por coluna
+   - Filtro por usuários (botão “Usuários” → multi-seleção → Aplicar)
+   - Chips abaixo mostram filtros ativos; clique em “×” para remover ou em “Limpar filtros” para resetar
+
+Atualizações em tempo real aparecem para todos (votos, comentários, enquetes, criação/edição/deleção, reordenação de colunas).
+
 ## 🔑 Credenciais de Teste
 
 Após executar o seed, você pode usar estas credenciais:
@@ -165,6 +186,9 @@ A documentação completa da API está disponível em `/docs` quando o servidor 
 - `DELETE /api/cards/:id` - Excluir card
 - `PATCH /api/cards/:id/move` - Mover card
 
+#### Usuários
+- `GET /api/users?search=` - Listar usuários (para o filtro de autores)
+
 #### Votos
 - `POST /api/cards/:id/votes` - Votar em card
 - `DELETE /api/cards/:id/votes` - Remover voto
@@ -176,8 +200,46 @@ A documentação completa da API está disponível em `/docs` quando o servidor 
 - `PATCH /api/comments/:id` - Atualizar comentário
 - `DELETE /api/comments/:id` - Excluir comentário
 
-#### Tempo Real
-- `GET /api/events` - Conectar ao stream SSE
+#### Tempo Real (Socket.IO)
+- Eventos emitidos pelo servidor (exemplos):
+  - `card:created`, `card:updated`, `card:deleted`, `card:moved`
+  - `card:voted`, `card:vote:removed`
+  - `comment:created`, `comment:updated`, `comment:deleted`
+  - `poll:created`, `poll:updated`, `poll:deleted`, `poll:voted`, `poll:vote:removed`
+  - `columns:reordered`
+
+O cliente registra handlers em `hooks/useSocket.ts` e atualiza o estado global em `store/kanban.ts`.
+
+## 🔒 Regras de Acesso (Menor Privilégio)
+
+- Qualquer usuário autenticado pode:
+  - Visualizar o board, cards e comentários
+  - Criar novas ideias (cards)
+  - Comentar e votar em cards / votar em enquetes
+  - Mover cards entre colunas
+
+- Somente o criador pode:
+  - Editar ou excluir o próprio card
+  - Editar ou excluir o próprio comentário
+  - Criar/editar/excluir enquetes do seu card
+
+As validações acontecem no backend (ex.: `cardService.updateCard`, `commentService.updateComment`), e as rotas sensíveis usam `authenticateToken`. Tentativas sem permissão retornam `403 Forbidden`.
+
+## 🛰️ Fluxo de Tempo Real (Resumo)
+
+1. Ação ocorre (ex.: voto/remover voto, novo comentário, mover coluna)
+2. Backend processa, persiste e emite evento Socket.IO
+3. Frontend recebe via `socketService` → `useSocket`, atualiza `store/kanban`
+4. UI re-renderiza automaticamente (sem F5)
+
+## 🧩 Boas Práticas Implementadas
+
+- Desacoplamento: UI ↔ Serviços ↔ Estado ↔ Socket
+- i18n completo (PT-BR/EN) inclusive para labels de filtros
+- Prevenção de duplicidades (comentários/enquetes) no estado
+- Filtros responsivos com chips limitados e contador “+N ...”
+- Logs de debug estratégicos (podem ser desativados em produção)
+
 
 ## 🧪 Testes
 
@@ -233,5 +295,3 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 - **Documentação**: [Wiki](https://github.com/seu-usuario/kanban-ideias/wiki)
 
 ---
-
-⭐ **Se este projeto te ajudou, considere dar uma estrela!**

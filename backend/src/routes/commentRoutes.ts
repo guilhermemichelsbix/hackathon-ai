@@ -116,7 +116,7 @@ router.get('/:id/comments/count', validateParams(idParamSchema), commentControll
  *       404:
  *         description: Comentário não encontrado
  */
-router.get('/:id', validateParams(idParamSchema), commentController.getCommentById);
+router.get('/comments/:id', validateParams(idParamSchema), commentController.getCommentById);
 
 /**
  * @swagger
@@ -159,7 +159,7 @@ router.get('/:id', validateParams(idParamSchema), commentController.getCommentBy
  *       404:
  *         description: Comentário não encontrado
  */
-router.patch('/:id', authenticateToken, validateParams(idParamSchema), validate(updateCommentSchema), commentController.updateComment);
+router.patch('/comments/:id', authenticateToken, validateParams(idParamSchema), validate(updateCommentSchema), commentController.updateComment);
 
 /**
  * @swagger
@@ -187,6 +187,6 @@ router.patch('/:id', authenticateToken, validateParams(idParamSchema), validate(
  *       404:
  *         description: Comentário não encontrado
  */
-router.delete('/:id', authenticateToken, validateParams(idParamSchema), commentController.deleteComment);
+router.delete('/comments/:id', authenticateToken, validateParams(idParamSchema), commentController.deleteComment);
 
 export default router;

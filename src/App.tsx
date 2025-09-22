@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router-dom";
 import { useEffect } from "react";
@@ -49,6 +50,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <ConfirmDialog />
         <div 
           className={`min-h-screen transition-all duration-300 bg-background text-foreground ${theme}`}
           data-theme={theme}

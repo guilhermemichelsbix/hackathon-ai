@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/hooks/useTheme';
@@ -36,6 +36,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useKanbanStore } from '@/store/kanban';
 import { authService } from '@/services/authService';
+import UserFilterModal from './UserFilterModal';
 import { toast } from 'sonner';
 import { CardFormModal } from './CardFormModal';
 import { ColumnFormModal } from './ColumnFormModal';
@@ -49,6 +50,8 @@ export function KanbanHeader() {
     setSearchQuery, 
     selectedColumnId, 
     setSelectedColumnId,
+    selectedCreators,
+    setSelectedCreators,
     visibleColumns,
     columnOrder,
     board,
@@ -63,6 +66,10 @@ export function KanbanHeader() {
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [isColumnModalOpen, setIsColumnModalOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState(null);
+  const [isUserFilterOpen, setIsUserFilterOpen] = useState(false);
+  const [pendingSelected, setPendingSelected] = useState<string[]>([]);
+
+  // apply from modal only
   
 
   const handleLogout = async () => {
@@ -136,15 +143,14 @@ export function KanbanHeader() {
                 {isConnected ? (
                   <>
                     <Wifi className="h-3 w-3" />
-                    Conectado
                   </>
                 ) : (
                   <>
                     <WifiOff className="h-3 w-3" />
-                    Desconectado
                   </>
                 )}
               </Badge>
+              {/* Users filter trigger is in the toolbar below */}
             </motion.div>
 
             {/* Right Side Options */}
@@ -225,6 +231,15 @@ export function KanbanHeader() {
                   className="pl-10 h-9 bg-background/50 border-border/50 focus:bg-background focus:border-border transition-all duration-200"
                 />
               </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 px-3 bg-background/50 border-border/50 hover:bg-background hover:border-border transition-all duration-200"
+                onClick={() => { setPendingSelected(selectedCreators || []); setIsUserFilterOpen(true); }}
+              >
+                <User className="h-4 w-4 mr-2" />
+                {t('kanban.users')}
+              </Button>
               
               <Select value={selectedColumnId || 'all'} onValueChange={(value) => setSelectedColumnId(value === 'all' ? null : value)}>
                 <SelectTrigger className="w-40 h-9 bg-background/50 border-border/50 focus:bg-background focus:border-border transition-all duration-200">
@@ -292,7 +307,10 @@ export function KanbanHeader() {
               </DropdownMenu>
             </div>
 
-            {/* Center: Stats */}
+            {/* Center space (stats moved to right) */}
+            <div className="hidden md:flex items-center space-x-2" />
+
+            {/* Right: Stats */}
             <div className="hidden md:flex items-center space-x-3">
               <Badge variant="secondary" className="flex items-center space-x-2 px-3 py-1 bg-secondary/50 text-secondary-foreground border-border/50 text-xs">
                 <span className="font-semibold">{totalCards}</span>
@@ -334,6 +352,68 @@ export function KanbanHeader() {
           </div>
         </div>
       </motion.div>
+
+      {/* Active filters compact row below toolbar */}
+      {(searchQuery || selectedColumnId || (selectedCreators && selectedCreators.length > 0)) && (
+        <div className="px-6 pt-1 pb-2 mt-4">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {(() => {
+              const chips: JSX.Element[] = [];
+              if (searchQuery) {
+                chips.push(
+                  <Badge key="search" variant="secondary" className="gap-2 text-xs py-1">
+                    {t('kanban.searchLabel')}: "{searchQuery}"
+                    <button className="text-xs" onClick={() => setSearchQuery('')}>×</button>
+                  </Badge>
+                );
+              }
+              if (selectedColumnId) {
+                const colName = board.columns.find(c => c.id === selectedColumnId)?.name || '—';
+                chips.push(
+                  <Badge key="column" variant="secondary" className="gap-2 text-xs py-1">
+                    {t('kanban.column')}: {colName}
+                    <button className="text-xs" onClick={() => setSelectedColumnId(null)}>×</button>
+                  </Badge>
+                );
+              }
+              (selectedCreators || []).forEach((id) => {
+                const u = board.cards.find(c => c.createdBy === id)?.creator;
+                chips.push(
+                  <Badge key={`author-${id}`} variant="secondary" className="gap-2 text-xs py-1">
+                    {t('kanban.author')}: {u?.name || id}
+                    <button className="text-xs" onClick={() => setSelectedCreators(selectedCreators.filter(x => x !== id))}>×</button>
+                  </Badge>
+                );
+              });
+
+              const MAX_CHIPS = 5;
+              const chipsToShow = chips.slice(0, MAX_CHIPS);
+              const hidden = chips.length - chipsToShow.length;
+              return (
+                <>
+                  {chipsToShow}
+                  {hidden > 0 && (
+                    <span className="text-muted-foreground text-[11px]">+{hidden} ...</span>
+                  )}
+                </>
+              );
+            })()}
+            <button
+              className="ml-2 text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
+              onClick={() => { setSearchQuery(''); setSelectedColumnId(null); setSelectedCreators([]); }}
+            >
+              {t('kanban.clearFilters')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <UserFilterModal
+        isOpen={isUserFilterOpen}
+        initialSelected={pendingSelected}
+        onClose={() => setIsUserFilterOpen(false)}
+        onApply={(ids) => setSelectedCreators(ids)}
+      />
 
       {/* Modals */}
       <CardFormModal

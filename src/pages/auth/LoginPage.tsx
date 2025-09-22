@@ -51,11 +51,14 @@ export default function LoginPage() {
       setUser(user);
       await loadBoard();
       
-      toast.success('Login realizado com sucesso!');
-    } catch (error: any) {
+      toast.success(t('auth.loginSuccess'));
+    } catch (error: unknown) {
       console.error('Login error:', error);
-      setError(error.response?.data?.message || 'Erro ao fazer login');
-      toast.error('Erro ao fazer login');
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as { response: { data: { message: string } } }).response.data.message 
+        : t('auth.loginError');
+      setError(errorMessage);
+      toast.error(t('auth.loginError'));
     } finally {
       setIsLoading(false);
     }
@@ -70,10 +73,10 @@ export default function LoginPage() {
     >
       <div className="text-center">
         <CardTitle className="text-2xl font-bold text-foreground">
-          Bem-vindo de volta!
+          {t('auth.welcomeBack')}
         </CardTitle>
         <CardDescription className="text-muted-foreground mt-2">
-          Faça login para acessar seu Kanban
+          {t('auth.loginDescription')}
         </CardDescription>
       </div>
 
@@ -93,7 +96,7 @@ export default function LoginPage() {
 
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium text-foreground">
-            Email
+            {t('auth.email')}
           </Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -101,7 +104,7 @@ export default function LoginPage() {
               id="email"
               name="email"
               type="email"
-              placeholder="seu@email.com"
+              placeholder={t('auth.emailPlaceholder')}
               value={formData.email}
               onChange={handleInputChange}
               className="pl-10 h-12 bg-background/50 border-border/50 focus:bg-background focus:border-border transition-all duration-200"
@@ -112,7 +115,7 @@ export default function LoginPage() {
 
         <div className="space-y-2">
           <Label htmlFor="password" className="text-sm font-medium text-foreground">
-            Senha
+            {t('auth.password')}
           </Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -120,7 +123,7 @@ export default function LoginPage() {
               id="password"
               name="password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
+              placeholder={t('auth.passwordPlaceholder')}
               value={formData.password}
               onChange={handleInputChange}
               className="pl-10 pr-10 h-12 bg-background/50 border-border/50 focus:bg-background focus:border-border transition-all duration-200"
@@ -150,12 +153,12 @@ export default function LoginPage() {
           {isLoading ? (
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-              Entrando...
+              {t('auth.loggingIn')}
             </div>
           ) : (
             <div className="flex items-center gap-2">
               <LogIn className="h-4 w-4" />
-              Entrar
+              {t('auth.login')}
             </div>
           )}
         </Button>
@@ -165,19 +168,19 @@ export default function LoginPage() {
         <Separator className="my-6" />
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="bg-card px-4 text-xs text-muted-foreground">
-            ou
+            {t('auth.or')}
           </span>
         </div>
       </div>
 
       <div className="text-center">
         <p className="text-sm text-muted-foreground">
-          Não tem uma conta?{' '}
+          {t('auth.noAccount')}{' '}
           <Link
             to="/auth/register"
             className="text-primary hover:text-primary/80 font-medium transition-colors duration-200"
           >
-            Criar conta
+            {t('auth.createAccount')}
           </Link>
         </p>
       </div>

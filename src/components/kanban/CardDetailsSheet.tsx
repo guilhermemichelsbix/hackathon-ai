@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
@@ -18,6 +18,7 @@ import {
   BarChart3,
   Plus,
 } from 'lucide-react';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 import {
   Sheet,
@@ -59,6 +60,7 @@ export function CardDetailsSheet({
 }: CardDetailsSheetProps) {
   const { t, i18n } = useTranslation();
   const { theme } = useTheme();
+  const confirm = useConfirm();
   const [newComment, setNewComment] = useState('');
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
@@ -66,7 +68,16 @@ export function CardDetailsSheet({
   const [editingPoll, setEditingPoll] = useState<Poll | null>(null);
   
   const currentUser = useCurrentUser();
-  const { getUserVoteForCard, createComment, updateCommentData, deleteComment, board, createPoll, updatePoll, deletePoll, votePoll } = useKanbanStore();
+  const { getUserVoteForCard, createComment, updateCommentData, deleteComment, deleteCard, board, createPoll, updatePoll, deletePoll, votePoll } = useKanbanStore();
+
+  // Limpar textarea quando o sheet é fechado
+  useEffect(() => {
+    if (!isOpen) {
+      setNewComment('');
+      setEditCommentText('');
+      setEditingComment(null);
+    }
+  }, [isOpen]);
 
   if (!card) return null;
 
@@ -88,6 +99,30 @@ export function CardDetailsSheet({
     onVote?.(currentCard);
   };
 
+  // Delete card (only owner)
+  const handleDeleteCard = async () => {
+    if (!canEdit) return;
+    
+    const confirmed = await confirm({
+      title: t('confirm.deleteCardTitle'),
+      description: t('confirm.deleteCardDescription'),
+      confirmText: t('confirm.confirm'),
+      cancelText: t('confirm.cancel'),
+      variant: 'destructive'
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await deleteCard(currentCard.id);
+      toast.success(t('card.deleteSuccess'));
+      onClose();
+    } catch (error) {
+      console.error('❌ Erro ao deletar card:', error);
+      toast.error(t('error.generic'));
+    }
+  };
+
   const handleEdit = () => {
     onEdit?.(currentCard);
     onClose();
@@ -100,10 +135,11 @@ export function CardDetailsSheet({
       // Chama a API para criar o comentário - Socket.IO vai atualizar o estado
       await createComment(currentCard.id, { body: newComment.trim() });
       setNewComment('');
+      toast.success(t('comment.createSuccess'));
       console.log('✅ Comentário criado via API - Socket.IO vai atualizar o estado');
     } catch (error) {
       console.error('❌ Erro ao criar comentário:', error);
-      toast.error('Erro ao adicionar comentário');
+      toast.error(t('comment.createError'));
     }
   };
 
@@ -120,10 +156,11 @@ export function CardDetailsSheet({
       await updateCommentData(commentId, { body: editCommentText.trim() });
       setEditingComment(null);
       setEditCommentText('');
+      toast.success(t('comment.updateSuccess'));
       console.log('✅ Comentário atualizado via API - Socket.IO vai atualizar o estado');
     } catch (error) {
       console.error('❌ Erro ao atualizar comentário:', error);
-      toast.error('Erro ao atualizar comentário');
+      toast.error(t('comment.updateError'));
     }
   };
 
@@ -133,15 +170,24 @@ export function CardDetailsSheet({
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!confirm(t('comment.confirmDeleteComment'))) return;
+    const confirmed = await confirm({
+      title: t('confirm.deleteCommentTitle'),
+      description: t('confirm.deleteCommentDescription'),
+      confirmText: t('confirm.confirm'),
+      cancelText: t('confirm.cancel'),
+      variant: 'destructive'
+    });
+
+    if (!confirmed) return;
     
     try {
       // Chama a API para deletar o comentário - Socket.IO vai atualizar o estado
       await deleteComment(commentId);
+      toast.success(t('comment.deleteSuccess'));
       console.log('✅ Comentário deletado via API - Socket.IO vai atualizar o estado');
     } catch (error) {
       console.error('❌ Erro ao deletar comentário:', error);
-      toast.error('Erro ao deletar comentário');
+      toast.error(t('comment.deleteError'));
     }
   };
 
@@ -149,7 +195,7 @@ export function CardDetailsSheet({
   const handleCreatePoll = () => {
     // Check if card already has a poll
     if (currentCard.polls && currentCard.polls.length > 0) {
-      toast.error('Este card já possui uma enquete. Apenas uma enquete por card é permitida.');
+      toast.error(t('poll.onePollPerCard'));
       return;
     }
     
@@ -164,13 +210,22 @@ export function CardDetailsSheet({
   };
 
   const handleDeletePoll = async (pollId: string) => {
-    if (!confirm(t('poll.pollDeleted'))) return;
+    const confirmed = await confirm({
+      title: t('confirm.deletePollTitle'),
+      description: t('confirm.deletePollDescription'),
+      confirmText: t('confirm.confirm'),
+      cancelText: t('confirm.cancel'),
+      variant: 'destructive'
+    });
+
+    if (!confirmed) return;
+
     try {
       await deletePoll(pollId);
       toast.success(t('poll.pollDeleted'));
     } catch (error) {
       console.error('Error deleting poll:', error);
-      toast.error('Erro ao excluir enquete');
+      toast.error(t('poll.deleteError'));
     }
   };
 
@@ -202,7 +257,7 @@ export function CardDetailsSheet({
       setEditingPoll(null);
     } catch (error) {
       console.error('Error submitting poll:', error);
-      toast.error('Erro ao salvar enquete');
+      toast.error(t('poll.saveError'));
     }
   };
 
@@ -213,7 +268,7 @@ export function CardDetailsSheet({
       toast.success(t('poll.voteRegistered'));
     } catch (error) {
       console.error('Error voting on poll:', error);
-      toast.error('Erro ao votar na enquete');
+      toast.error(t('poll.voteError'));
     }
   };
 
@@ -251,15 +306,26 @@ export function CardDetailsSheet({
                 </div>
                 
                 {canEdit && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleEdit}
-                    className="ml-auto border-border/30 hover:bg-secondary/30 transition-all duration-200 h-7 px-2 text-xs"
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    {t('common.edit')}
-                  </Button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEdit}
+                      className="border-border/30 hover:bg-secondary/30 transition-all duration-200 h-7 px-2 text-xs"
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      {t('common.edit')}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteCard}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      {t('card.delete')}
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -449,11 +515,6 @@ export function CardDetailsSheet({
                                       locale 
                                     })}
                                   </span>
-                                  {comment.updatedAt > comment.createdAt && (
-                                    <Badge variant="secondary" className="text-xs bg-secondary/50 text-secondary-foreground border-border/50">
-                                      {t('card.updatedAt')}
-                                    </Badge>
-                                  )}
                                 </div>
                             
                                 {canEditComment && !isEditing && (

@@ -49,8 +49,11 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
       toast.success(t('auth.loginSuccess'));
       onSuccess?.();
       onClose();
-    } catch (error: any) {
-      toast.error(error.message || t('auth.loginError'));
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'message' in error 
+        ? (error as { message: string }).message 
+        : t('auth.loginError');
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -60,7 +63,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     e.preventDefault();
     
     if (registerData.password !== registerData.confirmPassword) {
-      toast.error('Senhas não coincidem');
+      toast.error(t('auth.passwordMismatch'));
       return;
     }
 
@@ -74,11 +77,14 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         locale: 'pt-BR',
       });
       setUser(user);
-      toast.success('Conta criada com sucesso!');
+      toast.success(t('auth.registerSuccess'));
       onSuccess?.();
       onClose();
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao criar conta');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'message' in error 
+        ? (error as { message: string }).message 
+        : t('auth.registerError');
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -299,7 +305,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                       
                       <div className="space-y-2">
                         <Label htmlFor="register-confirm-password" className={theme === 'dark' ? 'text-white' : 'text-black'}>
-                          Confirmar senha
+                          {t('auth.confirmPassword')}
                         </Label>
                         <div className="relative">
                           <Lock className={`absolute left-3 top-3 h-4 w-4 ${
